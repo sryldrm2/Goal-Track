@@ -15,11 +15,11 @@ interface GoalDao {
     @Update
     suspend fun updateGoal(goal: SMARTGoalEntity)
 
-    @Query("SELECT * FROM goals ORDER BY id DESC")
-    fun getAllGoals(): Flow<List<SMARTGoalEntity>>
-
     @Query("SELECT * FROM goals WHERE id = :goalId")
     suspend fun getGoalById(goalId: Int): SMARTGoalEntity?
+
+    @Query("SELECT * FROM goals ORDER BY id DESC")
+    fun getAllGoals(): Flow<List<SMARTGoalEntity>>
 
     @Query("DELETE FROM goals WHERE id = :goalId")
     suspend fun deleteGoal(goalId: Int)
@@ -38,4 +38,10 @@ interface GoalDao {
 
     @Query("SELECT * FROM goals WHERE isCompleted = 0 AND endDate >= :todayStart AND endDate <= :todayEnd ORDER BY id DESC")
     fun getTodayGoals(todayStart: Long, todayEnd: Long): Flow<List<SMARTGoalEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDailyProgress(progress: DailyProgressEntity)
+
+    @Query("SELECT * FROM daily_progress WHERE goalId = :goalId AND date >= :startDate ORDER BY date ASC")
+    fun getWeeklyProgress(goalId: Int, startDate: Long): Flow<List<DailyProgressEntity>>
 }

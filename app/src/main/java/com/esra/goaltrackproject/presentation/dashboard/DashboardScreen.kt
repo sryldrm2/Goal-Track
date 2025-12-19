@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -73,38 +74,32 @@ fun DashboardScreen(
                 }
             }
 
-            // 3. Bugünün Hedefleri Başlığı
+            // 3. Tüm Hedeflerim Başlığı
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Bugünün Hedefleri",
+                    text = "Tüm Hedeflerim",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
             }
 
-            // 4. Liste ve Boş Durum
-            if (state.todayGoals.isEmpty()) {
+            // 4. Tüm Hedeflerin Listesi ve Hızlı Güncelleme Butonu
+            if (state.allGoals.isEmpty()) {
                 item {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 32.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "Bugün için planlanmış bir hedefiniz bulunmuyor. Yeni bir hedef ekleyerek başlayın!",
-                            textAlign = TextAlign.Center,
-                            color = Color.Gray,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Text(text = "Henüz bir hedef eklemediniz.", color = Color.Gray)
                     }
                 }
             } else {
-                items(state.todayGoals) { goal ->
+                items(state.allGoals) { goal ->
                     GoalItem(
                         goal = goal,
-                        onClick = { onGoalClick(goal.id) }
+                        onClick = { onGoalClick(goal.id) },
+                        onQuickProgress = { viewModel.incrementProgress(goal) }
                     )
                 }
             }
@@ -192,27 +187,65 @@ fun NearestDeadlineGoalCard(goal: SMARTGoalEntity, onGoalClick: (Int) -> Unit) {
 }
 
 @Composable
-fun GoalItem(goal: SMARTGoalEntity, onClick: () -> Unit) {
+fun GoalItem(goal: SMARTGoalEntity, onClick: () -> Unit, onQuickProgress: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            modifier = Modifier
+                .padding(16.dp).
+                fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                shape = CircleShape,
-                border = BorderStroke(1.dp, Color.Gray),
-                modifier = Modifier.size(24.dp)
-            ) {}
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = goal.title, fontWeight = FontWeight.Bold)
-                Text(text = goal.description, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+            IconButton(
+                onClick = { onQuickProgress() },
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AddCircle,
+                    contentDescription = "Hızlı İlerleme",
+                    tint = Color(0xFFFDD835),
+                    modifier = Modifier.size(32.dp)
+                )
             }
-            Text(text = "🏃")
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = goal.title,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+
+                LinearProgressIndicator(
+                    progress = { (goal.currentValue / goal.targetValue).toFloat().coerceIn(0f, 1f) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp)
+                        .height(6.dp),
+                    color = Color(0xFFFDD835),
+                    trackColor = Color.LightGray.copy(alpha = 0.3f),
+                    strokeCap = StrokeCap.Round
+                )
+            }
+
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "${goal.currentValue.toInt()}/${goal.targetValue.toInt()}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+                Text(
+                    text = goal.unit ?: "",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.Gray
+                )
+            }
         }
     }
 }

@@ -1,14 +1,16 @@
 package com.esra.goaltrackproject.presentation.detail
 
-import android.widget.Space
+import android.app.TimePickerDialog
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,8 +21,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.esra.goaltrackproject.data.SMARTGoalEntity
-import kotlin.math.roundToInt
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.ui.text.input.KeyboardType
+import com.esra.goaltrackproject.data.DailyProgressEntity
 
 @Composable
 fun GoalDetailScreen(
@@ -34,6 +37,7 @@ fun GoalDetailScreen(
     }
 
     val goal by viewModel.goal.collectAsState()
+    val weeklyProgress by viewModel.weeklyProgress.collectAsState()
     val context = LocalContext.current
 
     if (goal == null) {
@@ -60,6 +64,7 @@ fun GoalDetailScreen(
         GoalDetailContent(
             goal = goal!!,
             viewModel = viewModel,
+            weeklyProgress = weeklyProgress,
             modifier = Modifier.padding(padding)
         )
     }
@@ -76,6 +81,7 @@ fun GoalDetailAppBar(
 ) {
 
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showEditSheet by remember { mutableStateOf(false) }
 
     if (showDeleteDialog) {
         AlertDialog(
@@ -96,6 +102,18 @@ fun GoalDetailAppBar(
             }
         )
     }
+
+    if (showEditSheet) {
+        EditGoalBottomSheet(
+            goal = goal,
+            onDismiss = { showEditSheet = false },
+            onConfirm = { updatedGoal ->
+                viewModel.updateGoal(updatedGoal)
+                showEditSheet = false
+            }
+        )
+    }
+
     TopAppBar(
         title = { Text(text = "Hedef Detayı") },
         navigationIcon = {
@@ -104,6 +122,13 @@ fun GoalDetailAppBar(
             }
         },
         actions = {
+            IconButton(onClick = { showEditSheet = true }) {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = "Hedefi Düzenle",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
             IconButton(onClick = { showDeleteDialog = true }) {
                 Icon(
                     Icons.Default.Delete,
@@ -119,6 +144,7 @@ fun GoalDetailAppBar(
 fun GoalDetailContent(
     goal: SMARTGoalEntity,
     viewModel: GoalDetailViewModel,
+    weeklyProgress: List<DailyProgressEntity>,
     modifier: Modifier = Modifier
 ) {
     val progress = goal.progressPercent.toFloat() / 100f
@@ -168,7 +194,8 @@ fun GoalDetailContent(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text("Bu Hafta", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
-        WeeklyProgressPlaceHolder()
+
+        WeeklyProgressSection(weeklyProgress = weeklyProgress)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -210,8 +237,24 @@ fun DayStatisticsSection(goal: SMARTGoalEntity) {
 }
 
 @Composable
-fun WeeklyProgressPlaceHolder() {
+fun WeeklyProgressSection(
+    weeklyProgress: List<DailyProgressEntity>
+) {
     val days = listOf("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz")
+
+    val calendar = java.util.Calendar.getInstance().apply {
+        set(java.util.Calendar.DAY_OF_WEEK, java.util.Calendar.MONDAY)
+        set(java.util.Calendar.HOUR_OF_DAY, 0)
+        set(java.util.Calendar.MINUTE, 0)
+        set(java.util.Calendar.SECOND, 0)
+        set(java.util.Calendar.MILLISECOND, 0)
+    }
+
+    val weekDaysTimestamps = List(7) {
+        val time = calendar.timeInMillis
+        calendar.add(java.util.Calendar.DAY_OF_YEAR, 1)
+        time
+    }
 
     Row(
         modifier = Modifier
@@ -219,17 +262,20 @@ fun WeeklyProgressPlaceHolder() {
             .padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        days.forEach { day ->
+        weekDaysTimestamps.forEachIndexed{ index, timestamp ->
+            val dayData = weeklyProgress.find { it.date == timestamp }
+            val isDone = dayData != null && dayData.value > 0
+
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 CircularProgressIndicator(
-                    progress = { 0.5f },
+                    progress = { if (isDone) 1f else 0f },
                     modifier = Modifier.size(35.dp),
-                    color = Color(0xFFEAB308),
+                    color = if (isDone) Color(0xFF4CAF50) else Color(0xFFEAB308),
                     strokeWidth = 3.dp,
                     trackColor = Color.LightGray.copy(alpha = 0.3f)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = day, style = MaterialTheme.typography.labelSmall)
+                Text(text = days[index], style = MaterialTheme.typography.labelSmall)
             }
         }
     }
@@ -289,6 +335,109 @@ fun StatCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditGoalBottomSheet(
+    goal: SMARTGoalEntity,
+    onDismiss: () -> Unit,
+    onConfirm: (SMARTGoalEntity) -> Unit
+) {
+    val context = LocalContext.current
+    val sheetState = rememberModalBottomSheetState()
+
+    var editedTitle by remember { mutableStateOf(goal.title) }
+    var editedTargetValue by remember { mutableStateOf(goal.targetValue.toString()) }
+    var isReminderActive by remember { mutableStateOf(goal.isReminderActive) }
+    var selectedHour by remember { mutableStateOf(goal.reminderHour ?: 12) }
+    var selectedMinute by remember { mutableStateOf(goal.reminderMinute ?: 0) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text("Hedefi Düzenle", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = editedTitle,
+                onValueChange = { editedTitle = it },
+                label = { Text("Hedef Başlığı") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = editedTargetValue,
+                onValueChange = { editedTargetValue = it },
+                label = { Text("Hedef Değer") },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Hatırlatıcı Aktif", fontWeight = FontWeight.Medium)
+                Switch(
+                    checked = isReminderActive,
+                    onCheckedChange = { isReminderActive = it }
+                )
+            }
+
+            if (isReminderActive) {
+                OutlinedButton(
+                    onClick = {
+                        TimePickerDialog(
+                            context,
+                            { _, hour, minute ->
+                                selectedHour = hour
+                                selectedMinute = minute
+                            },
+                            selectedHour,
+                            selectedMinute,
+                            true
+                        ).show()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = "Saat Seç: ${String.format("%02d:%02d", selectedHour, selectedMinute)}")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = {
+                    val updated = goal.copy(
+                        title = editedTitle,
+                        targetValue = editedTargetValue.toDoubleOrNull() ?: goal.targetValue,
+                        isReminderActive = isReminderActive,
+                        reminderHour = if (isReminderActive) selectedHour else null,
+                        reminderMinute = if (isReminderActive) selectedMinute else null
+                    )
+                    onConfirm(updated)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Değişiklikleri Kaydet")
+            }
+        }
+    }
+}
 
 
 

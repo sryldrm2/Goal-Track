@@ -1,10 +1,13 @@
 package com.esra.goaltrackproject.presentation.dashboard
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.esra.goaltrackproject.data.GoalDao
 import com.esra.goaltrackproject.data.SMARTGoalEntity
+import com.esra.goaltrackproject.data.DailyProgressEntity
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import java.util.Calendar
 
 data class DashboardUiState(
@@ -22,7 +25,6 @@ class DashboardViewModel(
 
     private fun getTodayTimestampRange(): Pair<Long, Long> {
         val calendar = Calendar.getInstance()
-
         calendar.set(Calendar.HOUR_OF_DAY, 0)
         calendar.set(Calendar.MINUTE, 0)
         calendar.set(Calendar.SECOND, 0)
@@ -64,4 +66,45 @@ class DashboardViewModel(
             allGoals = allList
         )
     }
+
+    fun incrementProgress(goal: SMARTGoalEntity) {
+        if (goal.currentValue >= goal.targetValue) return
+
+        val todayStart = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
+        viewModelScope.launch {
+            val updatedGoal = goal.copy(currentValue = goal.currentValue + 1.0)
+            goalDao.updateGoal(updatedGoal)
+
+            goalDao.insertDailyProgress(
+                DailyProgressEntity(
+                    goalId = goal.id,
+                    date = todayStart,
+                    value = 1.0
+                )
+            )
+        }
+    }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

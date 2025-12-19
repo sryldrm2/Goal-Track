@@ -25,27 +25,15 @@ class GoalReminderWorker(
     }
 
     override suspend fun doWork(): Result {
-        Log.d(TAG, "=== WORKER ÇALIŞMAYA BAŞLADI ===")
-        Log.d(TAG, "Worker ID: ${id}")
-        Log.d(TAG, "Tags: ${tags}")
-        
         val goalTitle = inputData.getString("GOAL_TITLE") ?: "Hedef Hatırlatıcısı"
-        val goalId = inputData.getInt("GOAL_ID", -1)
         
-        Log.d(TAG, "Bildirim gönderme işlemi başlatıldı")
-        Log.d(TAG, "  - Goal ID: $goalId")
-        Log.d(TAG, "  - Goal Title: $goalTitle")
-
         createNotificationChannel()
         val success = sendNotification(goalTitle)
 
         return if (success) {
-            Log.d(TAG, "✅ Bildirim başarıyla gönderildi")
-            Log.d(TAG, "=== WORKER BAŞARIYLA TAMAMLANDI ===")
             Result.success()
         } else {
-            Log.w(TAG, "❌ Bildirim gönderilemedi - izin veya ayar sorunu olabilir")
-            Log.w(TAG, "=== WORKER HATA İLE TAMAMLANDI ===")
+            Log.w(TAG, "Bildirim gönderilemedi - izin veya ayar sorunu olabilir")
             Result.retry()
         }
     }
@@ -62,46 +50,30 @@ class GoalReminderWorker(
             }
             val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
-            Log.d(TAG, "Bildirim kanalı oluşturuldu: $CHANNEL_ID")
         }
     }
 
     private fun sendNotification(title: String): Boolean {
-        Log.d(TAG, "Bildirim gönderme fonksiyonu çağrıldı")
-        
         // Android 13+ için izin kontrolü
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val hasPermission = ContextCompat.checkSelfPermission(
-                applicationContext,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-            
-            Log.d(TAG, "Android 13+ izin kontrolü: ${if (hasPermission) "İZİN VAR ✅" else "İZİN YOK ❌"}")
-            
-            if (!hasPermission) {
+            if (ContextCompat.checkSelfPermission(
+                    applicationContext,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
                 Log.w(TAG, "Bildirim izni verilmemiş (Android 13+)")
                 return false
             }
-        } else {
-            Log.d(TAG, "Android 13 altı, izin kontrolü gerekmiyor")
         }
 
         // Bildirimlerin etkin olup olmadığını kontrol et
         val notificationManager = NotificationManagerCompat.from(applicationContext)
-        val notificationsEnabled = notificationManager.areNotificationsEnabled()
-        Log.d(TAG, "Bildirimler sistem ayarlarında: ${if (notificationsEnabled) "AÇIK ✅" else "KAPALI ❌"}")
-        
-        if (!notificationsEnabled) {
+        if (!notificationManager.areNotificationsEnabled()) {
             Log.w(TAG, "Bildirimler sistem ayarlarında devre dışı")
             return false
         }
 
         try {
-            Log.d(TAG, "Bildirim oluşturuluyor...")
-            Log.d(TAG, "  - Kanal ID: $CHANNEL_ID")
-            Log.d(TAG, "  - Başlık: Hedefini Unutma!")
-            Log.d(TAG, "  - İçerik: Zinciri kırma: $title")
-            
             val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setContentTitle("Hedefini Unutma!")
@@ -112,14 +84,10 @@ class GoalReminderWorker(
                 .build()
 
             val notificationId = System.currentTimeMillis().toInt()
-            Log.d(TAG, "Bildirim ID: $notificationId ile gönderiliyor...")
             notificationManager.notify(notificationId, notification)
-            Log.d(TAG, "✅ Bildirim başarıyla gönderildi (ID: $notificationId)")
             return true
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Bildirim gönderilirken hata oluştu", e)
-            Log.e(TAG, "Hata detayı: ${e.message}")
-            e.printStackTrace()
+            Log.e(TAG, "Bildirim gönderilirken hata oluştu", e)
             return false
         }
     }

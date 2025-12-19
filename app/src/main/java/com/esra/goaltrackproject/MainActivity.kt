@@ -17,13 +17,7 @@ class MainActivity : ComponentActivity() {
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
-            android.util.Log.d("MainActivity", "Bildirim izni verildi")
-        } else {
-            android.util.Log.w("MainActivity", "Bildirim izni reddedildi - bildirimler çalışmayabilir")
-        }
-    }
+    ) { /* İzin durumu işlendi */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
