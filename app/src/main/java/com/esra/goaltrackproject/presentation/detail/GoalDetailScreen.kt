@@ -1,16 +1,22 @@
 package com.esra.goaltrackproject.presentation.detail
 
 import android.app.TimePickerDialog
+import android.widget.Space
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,8 +28,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.esra.goaltrackproject.data.SMARTGoalEntity
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.input.KeyboardType
 import com.esra.goaltrackproject.data.DailyProgressEntity
+import java.util.Calendar
 
 @Composable
 fun GoalDetailScreen(
@@ -38,19 +46,24 @@ fun GoalDetailScreen(
 
     val goal by viewModel.goal.collectAsState()
     val weeklyProgress by viewModel.weeklyProgress.collectAsState()
+    val dailyValue by viewModel.dailyValue.collectAsState()
+    val completedDaysCount by viewModel.completedDaysCount.collectAsState()
     val context = LocalContext.current
+
+    val backgroundLight = Color(0xFFF8F8F5)
 
     if (goal == null) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(color = Color(0xFFFDD835))
         }
         return
     }
 
     Scaffold(
+        containerColor = backgroundLight,
         topBar = {
             GoalDetailAppBar(
                 goal = goal!!,
@@ -65,6 +78,8 @@ fun GoalDetailScreen(
             goal = goal!!,
             viewModel = viewModel,
             weeklyProgress = weeklyProgress,
+            dailyValue = dailyValue,
+            completedDaysCount = completedDaysCount,
             modifier = Modifier.padding(padding)
         )
     }
@@ -79,7 +94,6 @@ fun GoalDetailAppBar(
     onDeleteSuccess: () -> Unit,
     context: android.content.Context
 ) {
-
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showEditSheet by remember { mutableStateOf(false) }
 
@@ -87,12 +101,11 @@ fun GoalDetailAppBar(
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Hedefi Sil") },
-            text = { Text("${goal.title} hedefini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.") },
+            text = { Text("${goal.title} hedefini silmek istediğinize emin misiniz?") },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteGoal(goal.id)
-                    // Raporunda belirttiğin bildirim iptali işini ViewModel içinde yapman en iyisidir
-                    Toast.makeText(context, "${goal.title} Silindi", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Silindi", Toast.LENGTH_SHORT).show()
                     onDeleteSuccess()
                     showDeleteDialog = false
                 }) { Text("Sil", color = Color.Red) }
@@ -115,7 +128,8 @@ fun GoalDetailAppBar(
     }
 
     TopAppBar(
-        title = { Text(text = "Hedef Detayı") },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF8F8F5)),
+        title = { Text(text = "Hedef Detayı", fontWeight = FontWeight.Bold) },
         navigationIcon = {
             IconButton(onClick = onNavigateBack) {
                 Icon(Icons.Default.ArrowBack, contentDescription = "Geri")
@@ -123,18 +137,10 @@ fun GoalDetailAppBar(
         },
         actions = {
             IconButton(onClick = { showEditSheet = true }) {
-                Icon(
-                    Icons.Default.Edit,
-                    contentDescription = "Hedefi Düzenle",
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                Icon(Icons.Default.Edit, contentDescription = "Düzenle", tint = Color.Black)
             }
             IconButton(onClick = { showDeleteDialog = true }) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Hedefi Sil",
-                    tint = MaterialTheme.colorScheme.error
-                )
+                Icon(Icons.Default.Delete, contentDescription = "Sil", tint = Color.Red)
             }
         }
     )
@@ -145,138 +151,187 @@ fun GoalDetailContent(
     goal: SMARTGoalEntity,
     viewModel: GoalDetailViewModel,
     weeklyProgress: List<DailyProgressEntity>,
+    dailyValue: Double,
+    completedDaysCount: Int,
     modifier: Modifier = Modifier
 ) {
+    val primaryYellow = Color(0xFFFDD835)
     val progress = goal.progressPercent.toFloat() / 100f
-    val progressPercent = goal.progressPercent
+
+    val todayStart = remember {
+        Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+    }
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 20.dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(text = goal.title, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(text = goal.description, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text = goal.title, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+        Surface(
+            color = Color.Black.copy(alpha = 0.05f),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.padding(top = 8.dp)
+        ) {
+            Text(
+                text = goal.category.uppercase(),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Gray
+            )
+        }
 
         Spacer(modifier = Modifier.height(32.dp))
 
         Box(contentAlignment = Alignment.Center) {
             CircularProgressIndicator(
                 progress = { progress },
-                strokeWidth = 10.dp,
-                modifier = Modifier.size(150.dp),
-                color = Color(0xFFEAB308),
-                trackColor = Color.LightGray.copy(alpha = 0.2f)
+                strokeWidth = 12.dp,
+                modifier = Modifier.size(180.dp),
+                color = primaryYellow,
+                trackColor = Color.Black.copy(alpha = 0.05f),
+                strokeCap = StrokeCap.Round
             )
-            Text(
-                text = "%$progressPercent",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "%${goal.progressPercent}",
+                    fontSize = 36.sp,
+                    fontWeight = FontWeight.Black
+                )
+                Text(text = "Toplam", fontSize = 14.sp, color = Color.Gray)
+            }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Harika gidiyorsun!",
-            fontSize = 14.sp
+            text = "Bugün: ${dailyValue.toInt()} / ${goal.targetValue.toInt()} ${goal.unit ?: ""}",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        DayStatisticsSection(goal)
+        DayStatisticsSection(goal, completedDaysCount)
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text("Bu Hafta", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
-
-        WeeklyProgressSection(weeklyProgress = weeklyProgress)
+        Text(
+            "Haftalık Performans",
+            modifier = Modifier.align(Alignment.Start),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        WeeklyProgressSection(weeklyProgress = weeklyProgress, target = goal.targetValue)
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text("Son Notum", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
         GoalNoteCard(note = goal.note)
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        Button(
-            onClick = {
-                viewModel.markTodayCompleted()
-            },
-            enabled = goal.currentValue < goal.targetValue,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Bugünü Tamamladım")
-        }
+        val isFutureDate = false // Dashboard'da seçilen tarih varsa kontrol buraya gelir
 
-        Spacer(modifier = Modifier.height(16.dp))
+        if (goal.measurementType == "Sayisal") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = { viewModel.updateProgress(1.0) },
+                    enabled = dailyValue < goal.targetValue,
+                    modifier = Modifier.weight(1f).height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, tint = primaryYellow)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Miktarı Artır", color = primaryYellow, fontWeight = FontWeight.Bold)
+                }
+            }
+        } else {
+            Button(
+                onClick = { viewModel.updateProgress(1.0) },
+                enabled = dailyValue < 1.0,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (dailyValue >= 1.0) Color(0xFF4CAF50) else Color.Black
+                )
+            ) {
+                if (dailyValue >= 1.0) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color.White)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Tamamlandı", color = Color.White, fontWeight = FontWeight.Bold)
+                } else {
+                    Text("Bugünü Tamamla", color = primaryYellow, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(40.dp))
     }
 }
 
-@Composable
-fun DayStatisticsSection(goal: SMARTGoalEntity) {
-    val totalDays = ((goal.endDate - goal.startDate) / (1000 * 60 * 60 * 24)).toInt().coerceAtLeast(1)
-    val completedDays = ((System.currentTimeMillis() - goal.startDate) / (1000 * 60 * 60 * 24)).toInt().coerceAtLeast(0)
-    val remainingDays = (totalDays - completedDays).coerceAtLeast(0)
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        StatCard("Tamamlanan", completedDays, "Gün", Color(0xFFEAB308))
-        StatCard("Toplam", totalDays, "Gün", Color(0xFF475569))
-        StatCard("Kalan", remainingDays, "Gün", Color(0xFFEF4444))
+@Composable
+fun DayStatisticsSection(goal: SMARTGoalEntity, completedDaysCount: Int) {
+    val totalDays = ((goal.endDate - goal.startDate) / (1000 * 60 * 60 * 24)).toInt().coerceAtLeast(1)
+    val remainingDays = (totalDays - completedDaysCount).coerceAtLeast(0)
+
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        StatCard("Tamamlanan", completedDaysCount, "Gün", Color(0xFFFDD835), Modifier.weight(1f))
+        StatCard("Toplam", totalDays, "Gün", Color(0xFF475569), Modifier.weight(1f))
+        StatCard("Kalan", remainingDays, "Gün", Color(0xFFEF4444), Modifier.weight(1f))
     }
 }
 
 @Composable
 fun WeeklyProgressSection(
-    weeklyProgress: List<DailyProgressEntity>
+    weeklyProgress: List<DailyProgressEntity>,
+    target: Double
 ) {
     val days = listOf("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz")
 
-    val calendar = java.util.Calendar.getInstance().apply {
-        set(java.util.Calendar.DAY_OF_WEEK, java.util.Calendar.MONDAY)
-        set(java.util.Calendar.HOUR_OF_DAY, 0)
-        set(java.util.Calendar.MINUTE, 0)
-        set(java.util.Calendar.SECOND, 0)
-        set(java.util.Calendar.MILLISECOND, 0)
-    }
-
-    val weekDaysTimestamps = List(7) {
-        val time = calendar.timeInMillis
-        calendar.add(java.util.Calendar.DAY_OF_YEAR, 1)
-        time
+    val calendar = Calendar.getInstance().apply {
+        set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
     }
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        weekDaysTimestamps.forEachIndexed{ index, timestamp ->
+        repeat(7) { index ->
+            val timestamp = calendar.timeInMillis
             val dayData = weeklyProgress.find { it.date == timestamp }
-            val isDone = dayData != null && dayData.value > 0
+            val isDone = dayData != null && dayData.value >= target
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                CircularProgressIndicator(
-                    progress = { if (isDone) 1f else 0f },
-                    modifier = Modifier.size(35.dp),
-                    color = if (isDone) Color(0xFF4CAF50) else Color(0xFFEAB308),
-                    strokeWidth = 3.dp,
-                    trackColor = Color.LightGray.copy(alpha = 0.3f)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = days[index], style = MaterialTheme.typography.labelSmall)
+                Surface(
+                    shape = CircleShape,
+                    color = if (isDone) Color(0xFF4CAF50) else Color.Black.copy(alpha = 0.05f),
+                    modifier = Modifier.size(38.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        if (isDone) Icon(Icons.Default.Check, null, modifier = Modifier.size(20.dp), tint = Color.White)
+                        else Text(days[index], fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
+            calendar.add(Calendar.DAY_OF_YEAR, 1)
         }
     }
 }
@@ -284,53 +339,36 @@ fun WeeklyProgressSection(
 @Composable
 fun GoalNoteCard(note: String?) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFACC15).copy(alpha = 0.1f))
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFDD835).copy(alpha = 0.1f))
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = "Hedef Notu",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = if (note.isNullOrBlank()) "Henüz bir not eklenmemiş." else note,
-                style = MaterialTheme.typography.bodyMedium
-            )
+        Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Lightbulb, contentDescription = null, tint = Color(0xFFFDD835))
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text("Notum", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(text = if (note.isNullOrBlank()) "Henüz not yok." else note, fontSize = 13.sp)
+            }
         }
     }
 }
 
 @Composable
-fun StatCard(
-    title: String,
-    value: Int,
-    unit: String,
-    color: Color
-) {
+fun StatCard(title: String, value: Int, unit: String, color: Color, modifier: Modifier = Modifier) {
     Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)),
-        modifier = Modifier.size(90.dp)
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = modifier.height(100.dp)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
+            modifier = Modifier.fillMaxSize().padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = "$value",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = color
-            )
-            Text(text = unit, style = MaterialTheme.typography.labelSmall, color = color)
+            Text(text = "$value", fontSize = 22.sp, fontWeight = FontWeight.Black, color = color)
+            Text(text = title, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
         }
     }
 }

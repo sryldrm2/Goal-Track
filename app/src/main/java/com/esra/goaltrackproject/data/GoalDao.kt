@@ -53,4 +53,7 @@ interface GoalDao {
 
     @Query("SELECT * FROM goals WHERE endDate >= :selectedDate OR isCompleted = 0")
     fun getGoalsForDate(selectedDate: Long): Flow<List<SMARTGoalEntity>>
+
+    @Query("SELECT COUNT(*) FROM daily_progress WHERE goalId = :goalId AND value > 0")
+    suspend fun getCompletedDaysCount(goalId: Int): Int
 }

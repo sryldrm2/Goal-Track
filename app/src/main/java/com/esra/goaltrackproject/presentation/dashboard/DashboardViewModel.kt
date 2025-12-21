@@ -95,14 +95,11 @@ class DashboardViewModel(
 
         // Seçilen güne özel günlük progress hesapla
         val dailyProgressPercent = if (finalGoals.isNotEmpty()) {
-            // Her hedef için günlük progress yüzdesini hesapla ve ortalamasını al
             val dailyProgresses = finalGoals.map { goal ->
                 val dailyValue = valueMap[goal.id] ?: 0.0
                 if (goal.measurementType == "Sayisal") {
-                    // Sayısal hedefler için: (günlük değer / hedef değer) * 100
                     ((dailyValue / goal.targetValue).coerceIn(0.0, 1.0) * 100).toInt()
                 } else {
-                    // Tamamlanma hedefleri için: Yapıldıysa 100, yapılmadıysa 0
                     if (dailyValue > 0) 100 else 0
                 }
             }
@@ -115,7 +112,7 @@ class DashboardViewModel(
             activeGoalsCount = active,
             completedGoalsCount = completed,
             nearestGoal = nearest,
-            totalProgressPercent = dailyProgressPercent, // Seçilen güne özel günlük progress
+            totalProgressPercent = dailyProgressPercent,
             todayGoals = finalGoals,
             allGoals = actualAllList,
             selectedDate = args[5] as Long,
@@ -144,30 +141,23 @@ class DashboardViewModel(
         viewModelScope.launch {
             val existingProgress = goalDao.getDailyProgressForDate(goal.id, _selectedDate.value)
             val currentDailyValue = existingProgress?.value ?: 0.0
-            
-            // Günlük limit kontrolü
+
             if (goal.measurementType == "Sayisal") {
-                // Sayısal hedefler için günlük hedef kontrolü
                 if (currentDailyValue >= goal.targetValue) {
-                    // Günlük hedefe ulaşılmış, daha fazla artırma yapılamaz
                     return@launch
                 }
             } else {
-                // Tamamlanma hedefleri için: Zaten yapıldıysa tekrar yapma
                 if (currentDailyValue > 0) {
                     return@launch
                 }
             }
             
             val newDailyValue = if (goal.measurementType == "Sayisal") {
-                // Sayısal: Günlük değeri artır
                 (currentDailyValue + customValue).coerceAtMost(goal.targetValue)
             } else {
-                // Tamamlanma: 1.0 olarak işaretle
                 1.0
             }
 
-            // Toplam currentValue'yu güncelle (sadece sayısal hedefler için)
             val nextTotalValue = if (goal.measurementType == "Sayisal") {
                 (goal.currentValue + customValue).coerceAtMost(goal.targetValue)
             } else {

@@ -131,7 +131,7 @@ fun DashboardScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // "Bugün" Başlığı - Tam ortalanmış
+                    // "Bugün" Başlığı
                     Surface(
                         color = Color(0xFFFDD835),
                         shape = RoundedCornerShape(50.dp),
@@ -176,7 +176,7 @@ fun DashboardScreen(
                             icon = icon,
                             isSelected = state.selectedCategory == label,
                             primary = primaryYellow,
-                            onClick = { viewModel.onCategorySelected(label) } // ✅ Tıklama eklendi
+                            onClick = { viewModel.onCategorySelected(label) }
                         )
                     }
                 }
@@ -209,7 +209,7 @@ fun DashboardScreen(
 
 fun getCurrentWeek(): List<CalendarDay> {
     val calendar = Calendar.getInstance()
-    // 7 gün öncesinden başlatıyoruz
+    // 7 gün öncesinden başlatmak için
     calendar.add(Calendar.DAY_OF_YEAR, -7)
 
     val sdfDayName = SimpleDateFormat("EEE", Locale("tr"))
@@ -268,7 +268,7 @@ fun DateItem(
             }
         }
 
-        // Seçili günün altındaki o ikonik nokta
+        // Seçili günün altındaki nokta
         if (isSelected) {
             Spacer(modifier = Modifier.height(6.dp))
             Box(modifier = Modifier.size(6.dp).background(Color(0xFF3F51B5), CircleShape))

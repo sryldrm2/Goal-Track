@@ -58,10 +58,10 @@ fun AddGoalScreen(
     onGoalSaved: () -> Unit,
     viewModel: AddGoalViewModel
 ) {
-    val primaryYellow = Color(0xFFFDD835) // Dashboard ile uyumlu sarı
-    val backgroundLight = Color(0xFFF8F8F5) // HTML tasarımındaki arka plan
+    val primaryYellow = Color(0xFFFDD835)
+    val backgroundLight = Color(0xFFF8F8F5)
     val cardWhite = Color(0xFFFFFFFF)
-    val inputBg = Color(0xFFF2F2ED) // Gri kutular için
+    val inputBg = Color(0xFFF2F2ED)
     val textBlack = Color(0xFF1A1A1A)
     val textGray = Color(0xFF757575)
 
@@ -72,7 +72,7 @@ fun AddGoalScreen(
     var selectedCategory by remember { mutableStateOf("Genel") }
     var showCategoryDialog by remember { mutableStateOf(false) }
     val categories = listOf("Genel", "Sağlık", "İş", "Eğitim")
-    var measurementType by remember { mutableStateOf("Tamamlanma") } // Evet/Hayır veya Sayısal
+    var measurementType by remember { mutableStateOf("Tamamlanma") }
     var frequency by remember { mutableStateOf("Gunluk") }
     var priority by remember { mutableStateOf("Varsayılan") }
 
