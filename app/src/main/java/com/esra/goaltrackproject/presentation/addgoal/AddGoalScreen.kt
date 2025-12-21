@@ -2,27 +2,35 @@ package com.esra.goaltrackproject.presentation.addgoal
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
-import android.os.Build
-import android.widget.DatePicker
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddAlert
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -31,21 +39,47 @@ import androidx.compose.ui.unit.sp
 import com.esra.goaltrackproject.utils.toDateString
 import java.util.Calendar
 
+data class CategoryItem(
+    val name: String,
+    val icon: ImageVector
+)
+
+val categoryList = listOf(
+    CategoryItem("Genel", Icons.Default.GridView),
+    CategoryItem("Sağlık", Icons.Default.Favorite),
+    CategoryItem("İş", Icons.Default.Work),
+    CategoryItem("Eğitim", Icons.Default.School),
+    CategoryItem("Spor", Icons.Default.FitnessCenter),
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddGoalScreen(
     onGoalSaved: () -> Unit,
     viewModel: AddGoalViewModel
 ) {
+    val primaryYellow = Color(0xFFFDD835) // Dashboard ile uyumlu sarı
+    val backgroundLight = Color(0xFFF8F8F5) // HTML tasarımındaki arka plan
+    val cardWhite = Color(0xFFFFFFFF)
+    val inputBg = Color(0xFFF2F2ED) // Gri kutular için
+    val textBlack = Color(0xFF1A1A1A)
+    val textGray = Color(0xFF757575)
+
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var targetValue by remember { mutableStateOf("") }
+    var targetValue by remember { mutableStateOf("10") }
     var unit by remember { mutableStateOf("Adet") }
-    var measurementType by remember { mutableStateOf("Sayisal") }
-    var note by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("Genel") }
+    var showCategoryDialog by remember { mutableStateOf(false) }
+    val categories = listOf("Genel", "Sağlık", "İş", "Eğitim")
+    var measurementType by remember { mutableStateOf("Tamamlanma") } // Evet/Hayır veya Sayısal
+    var frequency by remember { mutableStateOf("Gunluk") }
+    var priority by remember { mutableStateOf("Varsayılan") }
 
     val calendar = Calendar.getInstance()
+    var startDate by remember { mutableStateOf(calendar.timeInMillis) }
     var endDate by remember { mutableStateOf(calendar.timeInMillis) }
+    var isEndDateActive by remember { mutableStateOf(false) }
 
     var isReminderActive by remember { mutableStateOf(false) }
     var reminderHour by remember { mutableStateOf(9) }
@@ -54,19 +88,7 @@ fun AddGoalScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (!isGranted && isReminderActive) {
-
-        }
-    }
-
     LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-        }
-
         viewModel.uiEvent.collect { event ->
             when (event) {
                 is AddGoalUiEvent.Success -> onGoalSaved()
@@ -75,179 +97,461 @@ fun AddGoalScreen(
         }
     }
 
-    val datePickerDialog = DatePickerDialog(
-        context,
-        { _, year, month, day ->
-            calendar.set(year, month, day)
-            endDate = calendar.timeInMillis
-        },
-        calendar.get(Calendar.YEAR),
-        calendar.get(Calendar.MONTH),
-        calendar.get(Calendar.DAY_OF_MONTH)
-    )
-
-    val timePickerDialog = TimePickerDialog(
-        context,
-        { _, hour, min ->
-            reminderHour = hour
-            reminderMinute = min
-        },
-        reminderHour, reminderMinute, true
-    )
-
     Scaffold(
+        containerColor = backgroundLight,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Yeni Hedef") },
+                title = { Text("Yeni Alışkanlık", color = textBlack, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onGoalSaved) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Geri")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Geri", tint = textBlack)
                     }
-                }
+                },
+                actions = {
+                    Button(
+                        onClick = {
+                            viewModel.addGoal(
+                                title = title,
+                                description = description,
+                                measurementType = measurementType,
+                                unit = if (measurementType == "Sayisal") unit else null,
+                                category = selectedCategory,
+                                targetValue = targetValue.toDoubleOrNull() ?: 1.0,
+                                endDate = if (isEndDateActive) endDate else System.currentTimeMillis() + 31536000000L,
+                                isReminderActive = isReminderActive,
+                                reminderHour = if (isReminderActive) reminderHour else null,
+                                reminderMinute = if (isReminderActive) reminderMinute else null,
+                                note = description
+                            )
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = primaryYellow),
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text("Oluştur", color = textBlack, fontWeight = FontWeight.Bold)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundLight)
             )
         }
-    ) { paddingValues ->
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
+                .padding(padding)
                 .verticalScroll(rememberScrollState())
+                .padding(16.dp)
         ) {
-            Text(
-                "Hedefini Belirle",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
+            // --- 1. GENEL BİLGİ ---
+            SectionHeader("Genel bilgi", "Gerekli", textBlack)
+            FormCard(cardWhite) {
+                // Başlık Input
+                TextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    placeholder = { Text("Alışkanlık adı") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = inputBg,
+                        unfocusedContainerColor = inputBg,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                )
 
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                placeholder = { Text("Örn: Kitap okuma, Su içme") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFFDD835))
-            )
+                Spacer(modifier = Modifier.height(12.dp))
 
-            Text(
-                text = "Ölçüm Türü",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 16.dp)
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
-                    .background(Color(0xFFEEEEEE), RoundedCornerShape(24.dp))
-                    .height(48.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                MeasurementTypeSelector("Sayısal", measurementType == "Sayisal") {
-                    measurementType = "Sayisal"
+                // Başlangıç Tarihi Seçimi
+                DatePickerRow("Başlangıç tarihi", startDate.toDateString(), textBlack, inputBg) {
+                    DatePickerDialog(context, { _, y, m, d ->
+                        calendar.set(y, m, d)
+                        startDate = calendar.timeInMillis
+                    }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
                 }
-                MeasurementTypeSelector(
-                    "Tamamlanma",
-                    measurementType == "Tamamlanma"
-                ) { measurementType = "Tamamlanma" }
+
+                // Bitiş Tarihi Switch
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Bitiş tarihi ekle", color = textBlack, fontWeight = FontWeight.Medium)
+                    Switch(
+                        checked = isEndDateActive,
+                        onCheckedChange = { isEndDateActive = it },
+                        colors = SwitchDefaults.colors(checkedThumbColor = primaryYellow)
+                    )
+                }
+
+                if (isEndDateActive) {
+                    DatePickerRow("Bitiş tarihi seç", endDate.toDateString(), textBlack, inputBg) {
+                        DatePickerDialog(context, { _, y, m, d ->
+                            calendar.set(y, m, d)
+                            endDate = calendar.timeInMillis
+                        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+                    }
+                }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            SectionHeader("Kategori", null, textBlack)
+            Surface(
+                onClick = { showCategoryDialog = true },
+                color = inputBg,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(selectedCategory, color = textBlack, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = textGray
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- 2. SIKLIK ---
+            SectionHeader("Sıklık", null, textBlack)
+            FormCard(cardWhite) {
+                listOf("Günlük", "Haftalık", "Aylık").forEach { item ->
+                    FrequencyOption(item, frequency == item, primaryYellow, textBlack) { frequency = item }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- 3. DEĞERLENDİRME TÜRÜ ---
+            SectionHeader("Değerlendirme türü", null, textBlack)
+
+            TypeSelectionCard(
+                "EVET VEYA HAYIR",
+                "Sadece aktiviteyi yapıp yapmadığınızı takip etmek mi istiyorsunuz?",
+                measurementType == "Tamamlanma",
+                primaryYellow, cardWhite, textBlack, textGray
+            ) { measurementType = "Tamamlanma" }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            TypeSelectionCard(
+                "SAYISAL DEĞER",
+                "Günlük hedef veya limit belirlemek ister misiniz?",
+                measurementType == "Sayisal",
+                primaryYellow, cardWhite, textBlack, textGray
+            ) { measurementType = "Sayisal" }
 
             if (measurementType == "Sayisal") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                FormCard(cardWhite, Modifier.padding(top = 8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextField(
+                            value = targetValue,
+                            onValueChange = { targetValue = it },
+                            label = { Text("Hedef") },
+                            modifier = Modifier.weight(1f),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            colors = TextFieldDefaults.colors(focusedContainerColor = inputBg, unfocusedContainerColor = inputBg)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        TextField(
+                            value = unit,
+                            onValueChange = { unit = it },
+                            label = { Text("Birim") },
+                            modifier = Modifier.weight(1f),
+                            colors = TextFieldDefaults.colors(focusedContainerColor = inputBg, unfocusedContainerColor = inputBg)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- 4. HATIRLATICI & NOTLAR ---
+            SectionHeader("Hatırlatıcı", "İsteğe Bağlı", textBlack)
+            FormCard(cardWhite) {
+                Surface(
+                    onClick = {
+                        isReminderActive = true
+                        TimePickerDialog(context, { _, h, m ->
+                            reminderHour = h
+                            reminderMinute = m
+                        }, reminderHour, reminderMinute, true).show()
+                    },
+                    color = inputBg,
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    OutlinedTextField(
-                        value = targetValue,
-                        onValueChange = { newValue ->
-                            if (newValue.all { it.isDigit() || it == '.' || it == ',' }) {
-                                targetValue = newValue.replace(",", ".")
-                            }
-                        },
-                        label = { Text("HEDEF DEĞER") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.weight(1f)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    OutlinedTextField(
-                        value = unit,
-                        onValueChange = { unit = it },
-                        label = { Text("BİRİM") },
-                        modifier = Modifier.weight(1f)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.AddAlert, contentDescription = null, tint = primaryYellow)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            if (isReminderActive) "Hergün ${String.format("%02d:%02d", reminderHour, reminderMinute)}"
+                            else "Hatırlatıcı ekle",
+                            color = textBlack, fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
-            Text(
-                "Not Ekle",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 16.dp)
-            )
-            OutlinedTextField(
-                value = note,
-                onValueChange = { note = it },
-                placeholder = { Text("Hedefinle ilgili küçük bir not...") },
-                modifier = Modifier.fillMaxWidth().height(100.dp),
-                shape = RoundedCornerShape(12.dp)
-            )
+            Spacer(modifier = Modifier.height(24.dp))
 
-            Text(
-                "Zamanlama",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 16.dp)
-            )
-            DatePickerField(
-                "Hedef Bitiş Tarihi",
-                endDate.toDateString()
-            ) { datePickerDialog.show() }
+            SectionHeader("Diger", "İsteğe Bağlı", textBlack)
+            FormCard(cardWhite) {
+                TextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    placeholder = { Text("Açıklama veya motivasyon notu...") },
+                    modifier = Modifier.fillMaxWidth().height(100.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = inputBg,
+                        unfocusedContainerColor = inputBg,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
 
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-                    .background(Color(0xFFEEEEEE), RoundedCornerShape(12.dp)).padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text("Günlük Hatırlatma", fontWeight = FontWeight.SemiBold)
-                    Text("Her gün aynı saatte", style = MaterialTheme.typography.bodySmall)
+            Spacer(modifier = Modifier.height(100.dp))
+        }
+    }
+    if (showCategoryDialog) {
+        CategorySelectionDialog(
+            onCategorySelected = { categoryName ->
+                selectedCategory = categoryName
+            },
+            onDismiss = { showCategoryDialog = false }
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun CategorySelectionDialog(
+    onCategorySelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val primaryYellow = Color(0xFFFDD835)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("KAPAT", color = Color.Black, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+            }
+        },
+        title = {
+            Text("Kategori Seçin", fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+        },
+        text = {
+            Column {
+                Divider(color = Color.LightGray.copy(0.3f), thickness = 1.dp)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2), // 2 kolon sabit
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.heightIn(max = 300.dp)
+                ) {
+                    items(categoryList) { item ->
+                        CategoryDialogItem(
+                            item = item,
+                            primaryColor = primaryYellow
+                        ) {
+                            onCategorySelected(item.name)
+                            onDismiss()
+                        }
+                    }
                 }
-                Switch(checked = isReminderActive, onCheckedChange = { isReminderActive = it })
             }
+        },
+        shape = RoundedCornerShape(28.dp),
+        containerColor = Color.White
+    )
+}
 
-            if (isReminderActive) {
-                TimePickerField(
-                    "Hatırlatma Saati",
-                    reminderHour,
-                    reminderMinute
-                ) { timePickerDialog.show() }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Button(
-                onClick = {
-                    viewModel.addGoal(
-                        title = title,
-                        description = description,
-                        measurementType = measurementType,
-                        unit = if (measurementType == "Sayisal") unit else null,
-                        targetValue = targetValue.toDoubleOrNull() ?: 1.0,
-                        endDate = endDate,
-                        isReminderActive = isReminderActive,
-                        reminderHour = if (isReminderActive) reminderHour else null,
-                        reminderMinute = if (isReminderActive) reminderMinute else null,
-                        note = note
-                    )
-                },
-                modifier = Modifier.fillMaxWidth().height(56.dp).padding(bottom = 16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFDD835)),
-                shape = RoundedCornerShape(12.dp)
+@Composable
+fun CategoryDialogItem(
+    item: CategoryItem,
+    primaryColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(60.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFFF8F8F5),
+        border = BorderStroke(1.dp, Color.LightGray.copy(0.2f))
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = primaryColor,
+                modifier = Modifier.size(32.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, tint = Color.Black)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Hedefi Oluştur", color = Color.Black, fontWeight = FontWeight.Bold)
+                Icon(
+                    imageVector = item.icon,
+                    contentDescription = null,
+                    modifier = Modifier.padding(6.dp),
+                    tint = Color.Black
+                )
             }
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = item.name,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                color = Color.Black,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
+fun SectionHeader(title: String, tag: String?, textColor: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp, start = 4.dp)) {
+        Text(title, color = textColor, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        if (tag != null) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Surface(color = Color.Black.copy(0.05f), shape = RoundedCornerShape(4.dp)) {
+                Text(tag, color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun FormCard(bgColor: Color, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        color = bgColor,
+        shape = RoundedCornerShape(16.dp),
+        shadowElevation = 2.dp,
+        modifier = modifier.fillMaxWidth(),
+        content = { Column(modifier = Modifier.padding(16.dp), content = content) }
+    )
+}
+
+@Composable
+fun FrequencyOption(text: String, isSelected: Boolean, primary: Color, textBlack: Color, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(
+            selected = isSelected,
+            onClick = onClick,
+            colors = RadioButtonDefaults.colors(selectedColor = primary)
+        )
+        Text(text, color = textBlack, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+    }
+}
+
+@Composable
+fun TypeSelectionCard(
+    title: String,
+    desc: String,
+    isSelected: Boolean,
+    primary: Color,
+    cardBg: Color,
+    textBlack: Color,
+    textGray: Color,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        color = cardBg,
+        shape = RoundedCornerShape(16.dp),
+        shadowElevation = if (isSelected) 4.dp else 1.dp,
+        border = if (isSelected) BorderStroke(2.dp, primary) else null
+    ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, color = textBlack, fontWeight = FontWeight.Bold)
+                Text(desc, color = textGray, fontSize = 13.sp)
+            }
+            RadioButton(selected = isSelected, onClick = onClick, colors = RadioButtonDefaults.colors(selectedColor = primary))
+        }
+    }
+}
+
+@Composable
+fun GoalTextField(label: String, value: String, onValueChange: (String) -> Unit, textColor: Color) {
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        modifier = Modifier.fillMaxWidth(),
+        colors = TextFieldDefaults.colors(
+            unfocusedContainerColor = Color.Transparent,
+            focusedContainerColor = Color.Transparent,
+            unfocusedTextColor = textColor,
+            focusedTextColor = textColor
+        )
+    )
+}
+
+@Composable
+fun DatePickerRow(label: String, value: String, textColor: Color, bg: Color, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        color = bg,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(label, color = textColor)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(value, color = textColor, fontWeight = FontWeight.Bold)
+                Icon(Icons.Default.DateRange, contentDescription = null, tint = Color.Gray, modifier = Modifier.padding(start = 8.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun CustomInputLabel(text: String) {
+    Text(text, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6B7280), modifier = Modifier.padding(bottom = 8.dp, start = 4.dp))
+}
+
+@Composable
+fun EvaluationOption(title: String, icon: ImageVector, isSelected: Boolean, modifier: Modifier, primary: Color, bg: Color, onClick: () -> Unit) {
+    Surface(
+        modifier = modifier.height(100.dp).clickable { onClick() },
+        shape = RoundedCornerShape(20.dp),
+        color = if (isSelected) primary.copy(alpha = 0.1f) else bg,
+        border = if (isSelected) BorderStroke(2.dp, primary) else null
+    ) {
+        Column(verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Surface(shape = CircleShape, color = if (isSelected) primary else Color.White, modifier = Modifier.size(36.dp)) {
+                Icon(icon, contentDescription = null, modifier = Modifier.padding(8.dp), tint = Color.Black)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(title, fontSize = 13.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
         }
     }
 }

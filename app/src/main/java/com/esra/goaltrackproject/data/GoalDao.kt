@@ -44,4 +44,13 @@ interface GoalDao {
 
     @Query("SELECT * FROM daily_progress WHERE goalId = :goalId AND date >= :startDate ORDER BY date ASC")
     fun getWeeklyProgress(goalId: Int, startDate: Long): Flow<List<DailyProgressEntity>>
+
+    @Query("SELECT * FROM daily_progress WHERE goalId = :goalId AND date = :date LIMIT 1")
+    suspend fun getDailyProgressForDate(goalId: Int, date: Long): DailyProgressEntity?
+
+    @Query("UPDATE goals SET currentValue = :newValue, isCompleted = :isCompleted WHERE id = :goalId")
+    suspend fun updateGoalProgress(goalId: Int, newValue: Double, isCompleted: Boolean)
+
+    @Query("SELECT * FROM goals WHERE endDate >= :selectedDate OR isCompleted = 0")
+    fun getGoalsForDate(selectedDate: Long): Flow<List<SMARTGoalEntity>>
 }

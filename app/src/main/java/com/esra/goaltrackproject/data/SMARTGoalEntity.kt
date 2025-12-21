@@ -13,6 +13,7 @@ data class SMARTGoalEntity(
 
     val measurementType: String,
     val unit: String? = null,
+    val category: String = "Genel",
 
     val targetValue: Double,
     val currentValue: Double = 0.0,

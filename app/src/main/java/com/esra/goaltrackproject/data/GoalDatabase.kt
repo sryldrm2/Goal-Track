@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [SMARTGoalEntity::class, DailyProgressEntity::class],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class GoalDatabase : RoomDatabase() {
