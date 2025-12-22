@@ -13,6 +13,9 @@ import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.esra.goaltrackproject.R
+import com.esra.goaltrackproject.data.GoalDatabase
+import com.esra.goaltrackproject.data.NotificationEntity
+import java.util.Calendar
 
 class GoalReminderWorker(
     appContext: Context,
@@ -25,13 +28,53 @@ class GoalReminderWorker(
     }
 
     override suspend fun doWork(): Result {
+        val goalId = inputData.getInt("GOAL_ID", -1)
         val goalTitle = inputData.getString("GOAL_TITLE") ?: "Hedef Hatırlatıcısı"
-        
+
+        val database = GoalDatabase.getDatabase(applicationContext)
+        val goal = database.goalDao().getGoalById(goalId)
+
+        if (goal != null) {
+            val calendar = Calendar.getInstance()
+            val todayAsPerSystem = when (calendar.get(Calendar.DAY_OF_WEEK)) {
+                Calendar.MONDAY -> 1
+                Calendar.TUESDAY -> 2
+                Calendar.WEDNESDAY -> 3
+                Calendar.THURSDAY -> 4
+                Calendar.FRIDAY -> 5
+                Calendar.SATURDAY -> 6
+                Calendar.SUNDAY -> 7
+                else -> 1
+            }
+
+            if (goal.frequency == "Haftalık" || goal.frequency == "Haftalik") {
+                val selectedDays = goal.selectedDays?.split(",")?.mapNotNull { it.toIntOrNull() } ?: emptyList()
+                if (!selectedDays.contains(todayAsPerSystem)) {
+                    Log.d(TAG, "Bugün hedef günü değil, bildirim atlanıyor.")
+                    return Result.success()
+                }
+            }
+        }
+
         createNotificationChannel()
         val success = sendNotification(goalTitle)
 
         return if (success) {
-            Result.success()
+            try {
+                database.notificationDao().insertNotification(
+                    NotificationEntity(
+                        goalId = goalId,
+                        title = "Hedef Hatırlatıcısı",
+                        message = "Zinciri kırma: $goalTitle",
+                        timestamp = System.currentTimeMillis(),
+                        isRead = false
+                    )
+                )
+                Result.success()
+            } catch (e: Exception) {
+                Log.e(TAG,"Veritabanına bildirim kaydedilemedi", e)
+                Result.success()
+            }
         } else {
             Log.w(TAG, "Bildirim gönderilemedi - izin veya ayar sorunu olabilir")
             Result.retry()

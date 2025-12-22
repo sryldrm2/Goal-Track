@@ -11,6 +11,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.esra.goaltrackproject.data.GoalDao
+import com.esra.goaltrackproject.data.GoalDatabase
+import com.esra.goaltrackproject.data.UserPreferences
 import com.esra.goaltrackproject.presentation.addgoal.AddGoalScreen
 import com.esra.goaltrackproject.presentation.addgoal.AddGoalViewModel
 import com.esra.goaltrackproject.presentation.dashboard.DashboardScreen
@@ -18,17 +20,43 @@ import com.esra.goaltrackproject.presentation.dashboard.DashboardViewModel
 import com.esra.goaltrackproject.presentation.detail.GoalDetailScreen
 import com.esra.goaltrackproject.presentation.detail.GoalDetailViewModel
 import com.esra.goaltrackproject.presentation.CustomViewModelFactory
+import com.esra.goaltrackproject.presentation.onboarding.OnBoardingScreen
 
 @Composable
 fun GoalNavGraph(goalDao: GoalDao) {
+    val context = LocalContext.current
     val navController = rememberNavController()
-    val application = LocalContext.current.applicationContext as Application
-    val factory = remember { CustomViewModelFactory(application, goalDao) }
+    val application = context.applicationContext as Application
+
+    val database = remember { GoalDatabase.getDatabase(context) }
+    val userPreferences = remember { UserPreferences(context) }
+
+    val factory = remember {
+        CustomViewModelFactory(
+            application = application,
+            goalDao = goalDao,
+            notificationDao = database.notificationDao()
+        ) }
+
+    val startRoute = if (userPreferences.isOnboardingCompleted()) Routes.DASHBOARD else Routes.ONBOARDING
 
     NavHost(
         navController = navController,
-        startDestination = Routes.DASHBOARD
+        startDestination = startRoute
     ) {
+        composable(Routes.ONBOARDING) {
+            OnBoardingScreen(
+                onFinished = { name, avatarId ->
+                    userPreferences.saveUserName(name)
+                    userPreferences.saveAvatar(avatarId)
+                    userPreferences.setOnboardingCompleted()
+                    navController.navigate(Routes.DASHBOARD) {
+                        popUpTo(Routes.ONBOARDING) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable(Routes.DASHBOARD) {
             val viewModel: DashboardViewModel = viewModel(factory = factory)
 

@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -74,6 +75,10 @@ fun AddGoalScreen(
     val categories = listOf("Genel", "Sağlık", "İş", "Eğitim")
     var measurementType by remember { mutableStateOf("Tamamlanma") }
     var frequency by remember { mutableStateOf("Gunluk") }
+    var selectedWeeklyDays by remember { mutableStateOf(setOf<Int>()) }
+    var selectedMonthlyDays by remember { mutableStateOf(setOf<Int>()) }
+    var showWeeklyDialog by remember { mutableStateOf(false) }
+    var showMonthlyDialog by remember { mutableStateOf(false) }
     var priority by remember { mutableStateOf("Varsayılan") }
 
     val calendar = Calendar.getInstance()
@@ -122,6 +127,8 @@ fun AddGoalScreen(
                                 isReminderActive = isReminderActive,
                                 reminderHour = if (isReminderActive) reminderHour else null,
                                 reminderMinute = if (isReminderActive) reminderMinute else null,
+                                frequency = frequency,
+                                selectedDays = if (frequency == "Haftalık") selectedWeeklyDays else selectedMonthlyDays,
                                 note = description
                             )
                         },
@@ -136,195 +143,433 @@ fun AddGoalScreen(
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
-        ) {
-            // --- 1. GENEL BİLGİ ---
-            SectionHeader("Genel bilgi", "Gerekli", textBlack)
-            FormCard(cardWhite) {
-                // Başlık Input
-                TextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    placeholder = { Text("Alışkanlık adı") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = inputBg,
-                        unfocusedContainerColor = inputBg,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                )
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+        if (isLandscape) {
+            // YATAY MOD
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    // 1. GENEL BİLGİ
+                    SectionHeader("Genel bilgi", "Gerekli", textBlack)
+                    FormCard(cardWhite) {
+                        // Başlık Input
+                        TextField(
+                            value = title,
+                            onValueChange = { title = it },
+                            placeholder = { Text("Alışkanlık adı") },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = inputBg,
+                                unfocusedContainerColor = inputBg,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Başlangıç Tarihi Seçimi
+                        DatePickerRow("Başlangıç tarihi", startDate.toDateString(), textBlack, inputBg) {
+                            DatePickerDialog(context, { _, y, m, d ->
+                                calendar.set(y, m, d)
+                                startDate = calendar.timeInMillis
+                            }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+                        }
+
+                        // Bitiş Tarihi Switch
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Bitiş tarihi ekle", color = textBlack, fontWeight = FontWeight.Medium)
+                            Switch(
+                                checked = isEndDateActive,
+                                onCheckedChange = { isEndDateActive = it },
+                                colors = SwitchDefaults.colors(checkedThumbColor = primaryYellow)
+                            )
+                        }
+
+                        if (isEndDateActive) {
+                            DatePickerRow("Bitiş tarihi seç", endDate.toDateString(), textBlack, inputBg) {
+                                DatePickerDialog(context, { _, y, m, d ->
+                                    calendar.set(y, m, d)
+                                    endDate = calendar.timeInMillis
+                                }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    SectionHeader("Kategori", null, textBlack)
+                    Surface(
+                        onClick = { showCategoryDialog = true },
+                        color = inputBg,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(selectedCategory, color = textBlack, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            }
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = textGray
+                            )
+                        }
+                    }
+                }
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    SectionHeader("Değerlendirme & Sıklık", null, textBlack)
+                    FormCard(cardWhite) {
+                        // Sıklık
+                        Text("Sıklık", color = textBlack, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+                        listOf("Günlük", "Haftalık", "Aylık").forEach { item ->
+                            FrequencyOption(item, frequency == item, primaryYellow, textBlack) {
+                                frequency = item
+                                if (item == "Haftalık") showWeeklyDialog = true
+                                if (item == "Aylık") showMonthlyDialog = true
+                            }
+
+                        }
+
+                        if (frequency != "Gunluk") {
+                            val count = if (frequency == "Haftalık") selectedWeeklyDays.size else selectedMonthlyDays.size
+                            Text(
+                                text = "$count gün seçildi - Düzenlemek için tıkla",
+                                fontSize = 12.sp,
+                                color = Color.Gray,
+                                modifier = Modifier
+                                    .padding(start = 16.dp, top = 4.dp)
+                                    .clickable { if (frequency == "Haftalık") showWeeklyDialog = true else showMonthlyDialog = true }
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Değerlendirme Türü
+                        Text("Değerlendirme türü", color = textBlack, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+                        TypeSelectionCard(
+                            "EVET VEYA HAYIR",
+                            "Sadece aktiviteyi yapıp yapmadığınızı takip etmek mi istiyorsunuz?",
+                            measurementType == "Tamamlanma",
+                            primaryYellow, cardWhite, textBlack, textGray
+                        ) { measurementType = "Tamamlanma" }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        TypeSelectionCard(
+                            "SAYISAL DEĞER",
+                            "Günlük hedef veya limit belirlemek ister misiniz?",
+                            measurementType == "Sayisal",
+                            primaryYellow, cardWhite, textBlack, textGray
+                        ) { measurementType = "Sayisal" }
+
+                        if (measurementType == "Sayisal") {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                TextField(
+                                    value = targetValue,
+                                    onValueChange = { targetValue = it },
+                                    label = { Text("Hedef") },
+                                    modifier = Modifier.weight(1f),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    colors = TextFieldDefaults.colors(focusedContainerColor = inputBg, unfocusedContainerColor = inputBg)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                TextField(
+                                    value = unit,
+                                    onValueChange = { unit = it },
+                                    label = { Text("Birim") },
+                                    modifier = Modifier.weight(1f),
+                                    colors = TextFieldDefaults.colors(focusedContainerColor = inputBg, unfocusedContainerColor = inputBg)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    SectionHeader("Hatırlatıcı & Notlar", "İsteğe Bağlı", textBlack)
+                    FormCard(cardWhite) {
+                        // Hatırlatıcı
+                        Surface(
+                            onClick = {
+                                isReminderActive = true
+                                TimePickerDialog(context, { _, h, m ->
+                                    reminderHour = h
+                                    reminderMinute = m
+                                }, reminderHour, reminderMinute, true).show()
+                            },
+                            color = inputBg,
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.AddAlert, contentDescription = null, tint = primaryYellow)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    if (isReminderActive) "Hergün ${String.format("%02d:%02d", reminderHour, reminderMinute)}"
+                                    else "Hatırlatıcı ekle",
+                                    color = textBlack, fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Açıklama
+                        TextField(
+                            value = description,
+                            onValueChange = { description = it },
+                            placeholder = { Text("Açıklama veya motivasyon notu...") },
+                            modifier = Modifier.fillMaxWidth().height(100.dp),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = inputBg,
+                                unfocusedContainerColor = inputBg,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(100.dp))
+                }
+            }
+        } else {
+            // DİKEY MOD
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp)
+            ) {
+                // 1. GENEL BİLGİ
+                SectionHeader("Genel bilgi", "Gerekli", textBlack)
+                FormCard(cardWhite) {
+                    // Başlık Input
+                    TextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        placeholder = { Text("Alışkanlık adı") },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = inputBg,
+                            unfocusedContainerColor = inputBg,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Başlangıç Tarihi Seçimi
+                    DatePickerRow("Başlangıç tarihi", startDate.toDateString(), textBlack, inputBg) {
+                        DatePickerDialog(context, { _, y, m, d ->
+                            calendar.set(y, m, d)
+                            startDate = calendar.timeInMillis
+                        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+                    }
+
+                    // Bitiş Tarihi Switch
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Bitiş tarihi ekle", color = textBlack, fontWeight = FontWeight.Medium)
+                        Switch(
+                            checked = isEndDateActive,
+                            onCheckedChange = { isEndDateActive = it },
+                            colors = SwitchDefaults.colors(checkedThumbColor = primaryYellow)
+                        )
+                    }
+
+                    if (isEndDateActive) {
+                        DatePickerRow("Bitiş tarihi seç", endDate.toDateString(), textBlack, inputBg) {
+                            DatePickerDialog(context, { _, y, m, d ->
+                                calendar.set(y, m, d)
+                                endDate = calendar.timeInMillis
+                            }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                SectionHeader("Kategori", null, textBlack)
+                Surface(
+                    onClick = { showCategoryDialog = true },
+                    color = inputBg,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(selectedCategory, color = textBlack, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        }
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = null,
+                            tint = textGray
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // --- 2. SIKLIK ---
+                SectionHeader("Sıklık", null, textBlack)
+                FormCard(cardWhite) {
+                    listOf("Günlük", "Haftalık", "Aylık").forEach { item ->
+                        FrequencyOption(item, frequency == item, primaryYellow, textBlack) {
+                            frequency = item
+                            if (item == "Haftalık") showWeeklyDialog = true
+                            if (item == "Aylık") showMonthlyDialog = true
+                        }
+                    }
+
+                    if (frequency != "Gunluk") {
+                        val count = if (frequency == "Haftalık") selectedWeeklyDays.size else selectedMonthlyDays.size
+                        Text(
+                            text = "$count gün seçildi - Düzenlemek için tıkla",
+                            fontSize = 12.sp,
+                            color = Color.Gray,
+                            modifier = Modifier
+                                .padding(start = 16.dp, top = 4.dp)
+                                .clickable { if (frequency == "Haftalık") showWeeklyDialog = true else showMonthlyDialog = true }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // --- 3. DEĞERLENDİRME TÜRÜ ---
+                SectionHeader("Değerlendirme türü", null, textBlack)
+
+                TypeSelectionCard(
+                    "EVET VEYA HAYIR",
+                    "Sadece aktiviteyi yapıp yapmadığınızı takip etmek mi istiyorsunuz?",
+                    measurementType == "Tamamlanma",
+                    primaryYellow, cardWhite, textBlack, textGray
+                ) { measurementType = "Tamamlanma" }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Başlangıç Tarihi Seçimi
-                DatePickerRow("Başlangıç tarihi", startDate.toDateString(), textBlack, inputBg) {
-                    DatePickerDialog(context, { _, y, m, d ->
-                        calendar.set(y, m, d)
-                        startDate = calendar.timeInMillis
-                    }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
-                }
+                TypeSelectionCard(
+                    "SAYISAL DEĞER",
+                    "Günlük hedef veya limit belirlemek ister misiniz?",
+                    measurementType == "Sayisal",
+                    primaryYellow, cardWhite, textBlack, textGray
+                ) { measurementType = "Sayisal" }
 
-                // Bitiş Tarihi Switch
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Bitiş tarihi ekle", color = textBlack, fontWeight = FontWeight.Medium)
-                    Switch(
-                        checked = isEndDateActive,
-                        onCheckedChange = { isEndDateActive = it },
-                        colors = SwitchDefaults.colors(checkedThumbColor = primaryYellow)
-                    )
-                }
-
-                if (isEndDateActive) {
-                    DatePickerRow("Bitiş tarihi seç", endDate.toDateString(), textBlack, inputBg) {
-                        DatePickerDialog(context, { _, y, m, d ->
-                            calendar.set(y, m, d)
-                            endDate = calendar.timeInMillis
-                        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+                if (measurementType == "Sayisal") {
+                    FormCard(cardWhite, Modifier.padding(top = 8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TextField(
+                                value = targetValue,
+                                onValueChange = { targetValue = it },
+                                label = { Text("Hedef") },
+                                modifier = Modifier.weight(1f),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                colors = TextFieldDefaults.colors(focusedContainerColor = inputBg, unfocusedContainerColor = inputBg)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            TextField(
+                                value = unit,
+                                onValueChange = { unit = it },
+                                label = { Text("Birim") },
+                                modifier = Modifier.weight(1f),
+                                colors = TextFieldDefaults.colors(focusedContainerColor = inputBg, unfocusedContainerColor = inputBg)
+                            )
+                        }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            SectionHeader("Kategori", null, textBlack)
-            Surface(
-                onClick = { showCategoryDialog = true },
-                color = inputBg,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text(selectedCategory, color = textBlack, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    }
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = null,
-                        tint = textGray
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // --- 2. SIKLIK ---
-            SectionHeader("Sıklık", null, textBlack)
-            FormCard(cardWhite) {
-                listOf("Günlük", "Haftalık", "Aylık").forEach { item ->
-                    FrequencyOption(item, frequency == item, primaryYellow, textBlack) { frequency = item }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // --- 3. DEĞERLENDİRME TÜRÜ ---
-            SectionHeader("Değerlendirme türü", null, textBlack)
-
-            TypeSelectionCard(
-                "EVET VEYA HAYIR",
-                "Sadece aktiviteyi yapıp yapmadığınızı takip etmek mi istiyorsunuz?",
-                measurementType == "Tamamlanma",
-                primaryYellow, cardWhite, textBlack, textGray
-            ) { measurementType = "Tamamlanma" }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            TypeSelectionCard(
-                "SAYISAL DEĞER",
-                "Günlük hedef veya limit belirlemek ister misiniz?",
-                measurementType == "Sayisal",
-                primaryYellow, cardWhite, textBlack, textGray
-            ) { measurementType = "Sayisal" }
-
-            if (measurementType == "Sayisal") {
-                FormCard(cardWhite, Modifier.padding(top = 8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextField(
-                            value = targetValue,
-                            onValueChange = { targetValue = it },
-                            label = { Text("Hedef") },
-                            modifier = Modifier.weight(1f),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            colors = TextFieldDefaults.colors(focusedContainerColor = inputBg, unfocusedContainerColor = inputBg)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        TextField(
-                            value = unit,
-                            onValueChange = { unit = it },
-                            label = { Text("Birim") },
-                            modifier = Modifier.weight(1f),
-                            colors = TextFieldDefaults.colors(focusedContainerColor = inputBg, unfocusedContainerColor = inputBg)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // --- 4. HATIRLATICI & NOTLAR ---
-            SectionHeader("Hatırlatıcı", "İsteğe Bağlı", textBlack)
-            FormCard(cardWhite) {
-                Surface(
-                    onClick = {
-                        isReminderActive = true
-                        TimePickerDialog(context, { _, h, m ->
-                            reminderHour = h
-                            reminderMinute = m
-                        }, reminderHour, reminderMinute, true).show()
-                    },
-                    color = inputBg,
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                // --- 4. HATIRLATICI & NOTLAR ---
+                SectionHeader("Hatırlatıcı", "İsteğe Bağlı", textBlack)
+                FormCard(cardWhite) {
+                    Surface(
+                        onClick = {
+                            isReminderActive = true
+                            TimePickerDialog(context, { _, h, m ->
+                                reminderHour = h
+                                reminderMinute = m
+                            }, reminderHour, reminderMinute, true).show()
+                        },
+                        color = inputBg,
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(Icons.Default.AddAlert, contentDescription = null, tint = primaryYellow)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            if (isReminderActive) "Hergün ${String.format("%02d:%02d", reminderHour, reminderMinute)}"
-                            else "Hatırlatıcı ekle",
-                            color = textBlack, fontWeight = FontWeight.Bold
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.AddAlert, contentDescription = null, tint = primaryYellow)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                if (isReminderActive) "Hergün ${String.format("%02d:%02d", reminderHour, reminderMinute)}"
+                                else "Hatırlatıcı ekle",
+                                color = textBlack, fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                SectionHeader("Diger", "İsteğe Bağlı", textBlack)
+                FormCard(cardWhite) {
+                    TextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        placeholder = { Text("Açıklama veya motivasyon notu...") },
+                        modifier = Modifier.fillMaxWidth().height(100.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = inputBg,
+                            unfocusedContainerColor = inputBg,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(100.dp))
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            SectionHeader("Diger", "İsteğe Bağlı", textBlack)
-            FormCard(cardWhite) {
-                TextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    placeholder = { Text("Açıklama veya motivasyon notu...") },
-                    modifier = Modifier.fillMaxWidth().height(100.dp),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = inputBg,
-                        unfocusedContainerColor = inputBg,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(100.dp))
         }
     }
     if (showCategoryDialog) {
@@ -335,6 +580,36 @@ fun AddGoalScreen(
             onDismiss = { showCategoryDialog = false }
         )
     }
+    if (showWeeklyDialog) {
+        WeeklySelectionDialog(
+            selectedDays = selectedWeeklyDays,
+            onDayClick = { day ->
+                selectedWeeklyDays = if (selectedWeeklyDays.contains(day)) {
+                    selectedWeeklyDays - day
+                } else {
+                    selectedWeeklyDays + day
+                }
+            },
+            onDismiss = { showWeeklyDialog = false },
+            primaryColor = primaryYellow
+        )
+    }
+
+    if (showMonthlyDialog) {
+        MonthlySelectionDialog(
+            selectedDays = selectedMonthlyDays,
+            onDayClick = { day ->
+                selectedMonthlyDays = if (selectedMonthlyDays.contains(day)) {
+                    selectedMonthlyDays - day
+                } else {
+                    selectedMonthlyDays + day
+                }
+            },
+            onDismiss = { showMonthlyDialog = false },
+            primaryColor = primaryYellow
+        )
+    }
+
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -465,6 +740,109 @@ fun FrequencyOption(text: String, isSelected: Boolean, primary: Color, textBlack
         )
         Text(text, color = textBlack, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WeeklyDayPicker(
+    selectedDays: Set<Int>,
+    onDayClick: (Int) -> Unit,
+    primaryColor: Color
+) {
+    val days = listOf("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz")
+    Column(modifier = Modifier.padding(top = 8.dp)) {
+        Text("Hangi günler?", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            days.forEachIndexed { index, day ->
+                val dayNum = index + 1
+                val isSelected = selectedDays.contains(dayNum)
+                Surface(
+                    onClick = { onDayClick(dayNum) },
+                    shape = CircleShape,
+                    color = if (isSelected) primaryColor else Color.Transparent,
+                    border = if (!isSelected) BorderStroke(1.dp, Color.LightGray) else null,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(day.take(1), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun WeeklySelectionDialog(
+    selectedDays: Set<Int>,
+    onDayClick: (Int) -> Unit,
+    onDismiss: () -> Unit,
+    primaryColor: Color
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Tamam", color = Color.Black) } },
+        title = { Text("Günleri Seçin", fontWeight = FontWeight.Bold) },
+        text = {
+            WeeklyDayPicker(selectedDays, onDayClick, primaryColor)
+        },
+        shape = RoundedCornerShape(24.dp),
+        containerColor = Color.White
+    )
+}
+
+@Composable
+fun MonthlyDayPicker(
+    selectedDays: Set<Int>,
+    onDayClick: (Int) -> Unit,
+    primaryColor: Color
+) {
+    Column(modifier = Modifier.padding(top = 8.dp)) {
+        Text("Ayın hangi günleri?", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(7), // 7li grid
+            modifier = Modifier.height(200.dp).padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            items(31) { index ->
+                val dayNum = index + 1
+                val isSelected = selectedDays.contains(dayNum)
+                Surface(
+                    onClick = { onDayClick(dayNum) },
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isSelected) primaryColor else Color(0xFFF2F2ED),
+                    modifier = Modifier.aspectRatio(1f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text("$dayNum", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MonthlySelectionDialog(
+    selectedDays: Set<Int>,
+    onDayClick: (Int) -> Unit,
+    onDismiss: () -> Unit,
+    primaryColor: Color
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Tamam", color = Color.Black) } },
+        title = { Text("Ayın Günlerini Seçin", fontWeight = FontWeight.Bold) },
+        text = {
+            MonthlyDayPicker(selectedDays, onDayClick, primaryColor)
+        },
+        shape = RoundedCornerShape(24.dp),
+        containerColor = Color.White
+    )
 }
 
 @Composable

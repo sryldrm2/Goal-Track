@@ -11,6 +11,8 @@ import androidx.lifecycle.viewModelScope
 import com.esra.goaltrackproject.data.GoalDao
 import com.esra.goaltrackproject.data.SMARTGoalEntity
 import com.esra.goaltrackproject.data.DailyProgressEntity
+import com.esra.goaltrackproject.data.NotificationDao
+import com.esra.goaltrackproject.data.NotificationEntity
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -42,11 +44,14 @@ data class DashboardUiState(
         "Sağlık" to Icons.Default.Favorite,
         "İş" to Icons.Default.Work,
         "Eğitim" to Icons.Default.School
-    )
+    ),
+    val notifications: List<NotificationEntity> = emptyList(),
+    val unreadNotificationCount: Int = 0,
 )
 
 class DashboardViewModel(
-    private val goalDao: GoalDao
+    private val goalDao: GoalDao,
+    private val notificationDao: NotificationDao
 ) : ViewModel() {
 
     private val _selectedCategory = MutableStateFlow("Tümü")
@@ -60,7 +65,9 @@ class DashboardViewModel(
         _selectedDate.flatMapLatest { date -> goalDao.getGoalsForDate(date) },
         goalDao.getAllGoals(),
         _selectedDate,
-        _selectedCategory
+        _selectedCategory,
+        notificationDao.getAllNotifications(),
+        notificationDao.getUnreadCount()
     ) { args: Array<Any?> ->
         val active = args[0] as Int
         val completed = args[1] as Int
@@ -69,11 +76,17 @@ class DashboardViewModel(
         val actualAllList = args[4] as List<SMARTGoalEntity>
         val selectedDate = args[5] as Long
         val currentCategory = args[6] as String
+        val notifications = args[7] as List<NotificationEntity>
+        val unreadCount = args[8] as Int
+
+        val frequencyFilteredGoals = filteredByDate.filter { goal ->
+            isGoalVisibleOnDate(goal, selectedDate)
+        }
 
         val finalGoals = if (currentCategory == "Tümü") {
-            filteredByDate
+            frequencyFilteredGoals
         } else {
-            filteredByDate.filter { it.category.equals(currentCategory, ignoreCase = true) }
+            frequencyFilteredGoals.filter { it.category.equals(currentCategory, ignoreCase = true) }
         }
 
         val valueMap = mutableMapOf<Int, Double>()
@@ -119,9 +132,27 @@ class DashboardViewModel(
             selectedCategory = currentCategory,
             headerTitle = formatHeaderDate(args[5] as Long),
             dailyCompletionMap = completionMap,
-            dailyValueMap = valueMap
+            dailyValueMap = valueMap,
+            notifications = notifications,
+            unreadNotificationCount = unreadCount
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DashboardUiState())
+
+    fun markNotificationAsRead(id: Int) = viewModelScope.launch {
+        notificationDao.markAsRead(id)
+    }
+
+    fun deleteNotification(id: Int) = viewModelScope.launch {
+        notificationDao.deleteNotification(id)
+    }
+
+    fun markAllNotificationsAsRead() = viewModelScope.launch {
+        notificationDao.markAllAsRead()
+    }
+
+    fun clearAllNotifications() = viewModelScope.launch {
+        notificationDao.deleteAllNotifications()
+    }
 
     fun onCategorySelected(category: String) {
         _selectedCategory.value = category
@@ -158,11 +189,7 @@ class DashboardViewModel(
                 1.0
             }
 
-            val nextTotalValue = if (goal.measurementType == "Sayisal") {
-                (goal.currentValue + customValue).coerceAtMost(goal.targetValue)
-            } else {
-                goal.currentValue + 1.0
-            }
+            val nextTotalValue = (goal.currentValue + customValue).coerceAtMost(goal.targetValue)
             
             val isNowCompleted = nextTotalValue >= goal.targetValue
 
@@ -201,6 +228,44 @@ class DashboardViewModel(
             today - 86400000 -> "Dün"
             else -> SimpleDateFormat("dd MMMM", Locale("tr")).format(Date(timestamp))
         }
+    }
+
+    private fun isGoalVisibleOnDate(goal: SMARTGoalEntity, dateTimestamp: Long): Boolean {
+        val goalStart = getStartOfDay(goal.startDate)
+        val goalEnd = getStartOfDay(goal.endDate)
+
+        if (dateTimestamp < goalStart || dateTimestamp > goalEnd) {
+            return false
+        }
+
+        val calendar = Calendar.getInstance().apply { timeInMillis = dateTimestamp }
+
+        // Kotlin Calendar'da Pazar=1, Pzt=2... Bizim UI'da Pzt=1. Bu yüzden dönüştürme yapıyoruz
+        val dayOfWeek = when (calendar.get(Calendar.DAY_OF_WEEK)) {
+            Calendar.MONDAY -> 1
+            Calendar.TUESDAY -> 2
+            Calendar.WEDNESDAY -> 3
+            Calendar.THURSDAY -> 4
+            Calendar.FRIDAY -> 5
+            Calendar.SATURDAY -> 6
+            Calendar.SUNDAY -> 7
+            else -> 1
+        }
+
+        val dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH)
+        return when (goal.frequency) {
+            "Günlük", "Gunluk" -> true
+            "Haftalık", "Haftalik" -> {
+                val selectedDays = goal.selectedDays?.split(",")?.mapNotNull { it.toIntOrNull() } ?: emptyList()
+                selectedDays.contains(dayOfWeek)
+            }
+            "Aylık", "Aylik" -> {
+                val selectedDays = goal.selectedDays?.split(",")?.mapNotNull { it.toIntOrNull() } ?: emptyList()
+                selectedDays.contains(dayOfMonth)
+            }
+            else -> true
+        }
+
     }
 }
 

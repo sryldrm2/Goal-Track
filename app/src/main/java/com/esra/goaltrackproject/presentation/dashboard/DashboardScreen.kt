@@ -2,7 +2,9 @@ package com.esra.goaltrackproject.presentation.dashboard
 
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -13,6 +15,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -24,10 +27,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.esra.goaltrackproject.data.NotificationEntity
 import com.esra.goaltrackproject.data.SMARTGoalEntity
+import com.esra.goaltrackproject.data.UserPreferences
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -47,14 +54,35 @@ fun DashboardScreen(
     onAddGoalClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val userPreferences = remember { UserPreferences(context) }
+    val userName = remember { userPreferences.getUserName() }
+    val avatarResId = remember { userPreferences.getAvatar(com.esra.goaltrackproject.R.drawable.avatar1) }
     val state by viewModel.uiState.collectAsState()
+    var showNotificationSheet by remember { mutableStateOf(false) }
     val backgroundLight = Color(0xFFF8F8F5)
     val primaryYellow = Color(0xFFFDD835)
 
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
+    val screenHeight = configuration.screenHeightDp.dp
+    val isLandscape = screenWidth > screenHeight
     val spacing = 8.dp
     val itemWidth = (screenWidth - 40.dp - (spacing * 4)) / 5
+
+    if (showNotificationSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showNotificationSheet = false },
+            containerColor = Color.White
+        ) {
+            NotificationSheetContent(
+                notifications = state.notifications,
+                onMarkAsRead = { viewModel.markNotificationAsRead(it) },
+                onDelete = { viewModel.deleteNotification(it) },
+                onMarkAllRead = { viewModel.markAllNotificationsAsRead() },
+                onClearAll = { viewModel.clearAllNotifications() }
+            )
+        }
+    }
 
     Scaffold(
         containerColor = backgroundLight,
@@ -69,83 +97,101 @@ fun DashboardScreen(
             }
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            // 1. Header (Selamlama)
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+        if (isLandscape) {
+            // YATAY MOD
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .weight(0.4f)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = CircleShape, modifier = Modifier.size(50.dp), color = Color.LightGray) {}
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text("Merhaba, Esra 👋", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-                            Text("Bugünün Hedefleri", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Image(
+                                painter = painterResource(id = avatarResId),
+                                contentDescription = "Profil Resmi",
+                                modifier = Modifier
+                                    .size(50.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White)
+                                    .border(1.dp, Color.LightGray.copy(0.3f), CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text("Merhaba, $userName👋", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text("Bugünün Hedefleri", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                            }
+                        }
+                        Box {
+                            IconButton(onClick = { showNotificationSheet = true }) {
+                                Icon(
+                                    Icons.Default.Notifications,
+                                    contentDescription = "Bildirimler",
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            if (state.unreadNotificationCount > 0) {
+                                Surface(
+                                    color = Color.Red,
+                                    shape = CircleShape,
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = (-2).dp, y = 2.dp),
+                                    border = BorderStroke(2.dp, Color.White)
+                                ) {
+                                    Text(
+                                        text = if (state.unreadNotificationCount > 9) "9+" else state.unreadNotificationCount.toString(),
+                                        color = Color.White,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
                         }
                     }
-                    IconButton(onClick = {
-                        Toast.makeText(
-                            context,
-                            "Bildirim ayarları çok yakında!",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }) {
-                        Icon(
-                            Icons.Default.Notifications,
-                            contentDescription = null,
-                            modifier = Modifier.size(28.dp))
-                    }
-                }
-            }
 
-            // 2. Başarı Kartı (Hero Card)
-            item { HeroSuccessCard(totalProgress = state.totalProgressPercent) }
+                    HeroSuccessCard(totalProgress = state.totalProgressPercent)
 
-            // --- 3. ADIM: 5 GÜNLÜK KAYDIRILABİLİR TARİH ŞERİDİ ---
-            item {
-                val weekDays = remember { getCurrentWeek() }
-                val listState = rememberLazyListState()
-
-                val selectedIndex = weekDays.indexOfFirst {
-                    isSameDay(it.dateInMillis, state.selectedDate)
-                }
-
-                val todayIndex = weekDays.indexOfFirst { it.isToday }
-
-                // Sadece scroll ile ortalamayı yap, padding hesaplaması yok
-                LaunchedEffect(todayIndex) {
-                    if (selectedIndex != -1) {
-                        listState.animateScrollToItem(selectedIndex)
-                    }
-                }
-
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // "Bugün" Başlığı
                     Surface(
                         color = Color(0xFFFDD835),
-                        shape = RoundedCornerShape(50.dp),
-                        modifier = Modifier.padding(bottom = 12.dp)
+                        shape = RoundedCornerShape(50.dp)
                     ) {
                         Text(
                             text = state.headerTitle,
-                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 14.sp
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
                         )
                     }
 
-                    // KAYDIRILABİLİR ŞERİT
+                    val weekDays = remember { getCurrentWeek() }
+                    val listState = rememberLazyListState()
+                    val selectedIndex = weekDays.indexOfFirst {
+                        isSameDay(it.dateInMillis, state.selectedDate)
+                    }
+                    val todayIndex = weekDays.indexOfFirst { it.isToday }
+
+                    LaunchedEffect(todayIndex) {
+                        if (selectedIndex != -1) {
+                            listState.animateScrollToItem(selectedIndex)
+                        }
+                    }
+
                     LazyRow(
                         state = listState,
                         modifier = Modifier.fillMaxWidth(),
@@ -161,48 +207,205 @@ fun DashboardScreen(
                             )
                         }
                     }
-                }
-            }
 
-            // 4. Kategori Filtreleri
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                        state.categories.forEach { (label, icon) ->
+                            CategoryChip(
+                                label = label,
+                                icon = icon,
+                                isSelected = state.selectedCategory == label,
+                                primary = primaryYellow,
+                                onClick = { viewModel.onCategorySelected(label) }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                    }
+                }
+
+                LazyColumn(
+                    modifier = Modifier.weight(0.6f),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 100.dp)
                 ) {
-                    state.categories.forEach { (label, icon) ->
-                        CategoryChip(
-                            label = label,
-                            icon = icon,
-                            isSelected = state.selectedCategory == label,
-                            primary = primaryYellow,
-                            onClick = { viewModel.onCategorySelected(label) }
-                        )
+                    if (state.todayGoals.isEmpty()) {
+                        item {
+                            EmptyStateComponent(
+                                category = state.selectedCategory,
+                                onAddClick = onAddGoalClick
+                            )
+                        }
+                    } else {
+                        items(state.todayGoals) { goal ->
+                            GoalListItem(
+                                goal = goal,
+                                isDoneToday = state.dailyCompletionMap[goal.id] ?: false,
+                                dailyValue = state.dailyValueMap[goal.id] ?: 0.0,
+                                selectedDate = state.selectedDate,
+                                onNavigate = { onGoalClick(goal.id) },
+                                onIncrement = { viewModel.incrementProgress(goal) }
+                            )
+                        }
                     }
                 }
             }
-            // 5. Hedef Listesi
-            if (state.todayGoals.isEmpty()) {
+        } else {
+            // DİKEY MOD
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
                 item {
-                    EmptyStateComponent(
-                        category = state.selectedCategory,
-                        onAddClick = onAddGoalClick
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Image(
+                                painter = painterResource(id = avatarResId),
+                                contentDescription = "Profil Resmi",
+                                modifier = Modifier
+                                    .size(55.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White)
+                                    .border(1.dp, Color.LightGray.copy(0.3f), CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text("Merhaba, $userName 👋", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                                Text("Bugünün Hedefleri", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Box {
+                            IconButton(onClick = { showNotificationSheet = true }) {
+                                Icon(
+                                    Icons.Default.Notifications,
+                                    contentDescription = "Bildirimler",
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            if (state.unreadNotificationCount > 0) {
+                                Surface(
+                                    color = Color.Red,
+                                    shape = CircleShape,
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = (-2).dp, y = 2.dp),
+                                    border = BorderStroke(2.dp, Color.White)
+                                ) {
+                                    Text(
+                                        text = if (state.unreadNotificationCount > 9) "9+" else state.unreadNotificationCount.toString(),
+                                        color = Color.White,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
-            } else {
-                items(state.todayGoals) { goal ->
-                    GoalListItem(
-                        goal = goal,
-                        isDoneToday = state.dailyCompletionMap[goal.id] ?: false,
-                        dailyValue = state.dailyValueMap[goal.id] ?: 0.0,
-                        selectedDate = state.selectedDate,
-                        onNavigate = { onGoalClick(goal.id) },
-                        onIncrement = { viewModel.incrementProgress(goal) }
-                    )
-                }
-            }
 
-            item { Spacer(modifier = Modifier.height(100.dp)) }
+                // 2. Başarı Kartı (Hero Card)
+                item { HeroSuccessCard(totalProgress = state.totalProgressPercent) }
+
+                // --- 3. KAYDIRILABİLİR TARİH ŞERİDİ ---
+                item {
+                    val weekDays = remember { getCurrentWeek() }
+                    val listState = rememberLazyListState()
+
+                    val selectedIndex = weekDays.indexOfFirst {
+                        isSameDay(it.dateInMillis, state.selectedDate)
+                    }
+
+                    val todayIndex = weekDays.indexOfFirst { it.isToday }
+
+                    LaunchedEffect(todayIndex) {
+                        if (selectedIndex != -1) {
+                            listState.animateScrollToItem(selectedIndex)
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Surface(
+                            color = Color(0xFFFDD835),
+                            shape = RoundedCornerShape(50.dp),
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        ) {
+                            Text(
+                                text = state.headerTitle,
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 14.sp
+                            )
+                        }
+
+                        LazyRow(
+                            state = listState,
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(spacing),
+                        ) {
+                            items(weekDays) { day ->
+                                DateItem(
+                                    day = day.dayName,
+                                    num = day.dayNumber,
+                                    isSelected = isSameDay(day.dateInMillis, state.selectedDate),
+                                    primary = Color(0xFFFDD835),
+                                    onClick = { viewModel.onDateSelected(day.dateInMillis) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 4. Kategori Filtreleri
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        state.categories.forEach { (label, icon) ->
+                            CategoryChip(
+                                label = label,
+                                icon = icon,
+                                isSelected = state.selectedCategory == label,
+                                primary = primaryYellow,
+                                onClick = { viewModel.onCategorySelected(label) }
+                            )
+                        }
+                    }
+                }
+
+                // 5. Hedef Listesi
+                if (state.todayGoals.isEmpty()) {
+                    item {
+                        EmptyStateComponent(
+                            category = state.selectedCategory,
+                            onAddClick = onAddGoalClick
+                        )
+                    }
+                } else {
+                    items(state.todayGoals) { goal ->
+                        GoalListItem(
+                            goal = goal,
+                            isDoneToday = state.dailyCompletionMap[goal.id] ?: false,
+                            dailyValue = state.dailyValueMap[goal.id] ?: 0.0,
+                            selectedDate = state.selectedDate,
+                            onNavigate = { onGoalClick(goal.id) },
+                            onIncrement = { viewModel.incrementProgress(goal) }
+                        )
+                    }
+                }
+
+                item { Spacer(modifier = Modifier.height(100.dp)) }
+            }
         }
     }
 }
@@ -306,13 +509,13 @@ fun GoalListItem(
     onIncrement: () -> Unit
 ) {
     // Gelecek günler için kontrol
-    val todayStart = java.util.Calendar.getInstance().apply {
+    val todayStart = Calendar.getInstance().apply {
         set(Calendar.HOUR_OF_DAY, 0)
         set(Calendar.MINUTE, 0)
         set(Calendar.SECOND, 0)
         set(Calendar.MILLISECOND, 0)
     }.timeInMillis
-    
+
     val isFutureDate = selectedDate > todayStart
 
     val displayValue = minOf(dailyValue, goal.targetValue)
@@ -329,7 +532,7 @@ fun GoalListItem(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // İkon
+
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = Color(0xFFF8F8F5),
@@ -340,7 +543,6 @@ fun GoalListItem(
 
                 Spacer(modifier = Modifier.width(16.dp))
 
-                // Başlık ve Kategori
                 Column(modifier = Modifier.weight(1f)) {
                     Text(goal.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Surface(color = Color(0xFFF2F2ED), shape = RoundedCornerShape(4.dp)) {
@@ -348,7 +550,6 @@ fun GoalListItem(
                     }
                 }
 
-                // Aksiyon Butonu
                 IconButton(
                     onClick = onIncrement,
                     enabled = !isFutureDate // Gelecek günler için devre dışı
@@ -362,7 +563,6 @@ fun GoalListItem(
                             modifier = Modifier.size(28.dp)
                         )
                     } else if (goal.measurementType == "Sayisal") {
-                        // Sayısal hedefler için: Günlük hedefe ulaşıldıysa yeşil tik, değilse artırma butonu
                         Icon(
                             imageVector = if (isDoneToday) Icons.Default.CheckCircle else Icons.Default.AddCircle,
                             contentDescription = if (isDoneToday) "Tamamlandı" else "Artır",
@@ -370,7 +570,6 @@ fun GoalListItem(
                             modifier = Modifier.size(28.dp)
                         )
                     } else {
-                        // Tamamlanma hedefleri için: Mevcut mantık
                         Icon(
                             imageVector = if (isDoneToday) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                             contentDescription = null,
@@ -381,20 +580,17 @@ fun GoalListItem(
                 }
             }
 
-            // Sayısal Hedef İlerleme Çubuğu
             if (goal.measurementType == "Sayisal") {
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // ✅ Düzeltilmiş Değer: displayValue kullanıldı
                     Text(
                         text = "Günlük: ${displayValue.toInt()}/${goal.targetValue.toInt()} ${goal.unit ?: ""}",
                         fontSize = 12.sp,
                         color = Color.Gray
                     )
-                    // ✅ Düzeltilmiş Yüzde: displayPercentage kullanıldı
                     Text(
                         text = "%$displayPercentage",
                         fontSize = 12.sp,
@@ -402,7 +598,6 @@ fun GoalListItem(
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                // ✅ Düzeltilmiş Çubuk: progressFactor kullanıldı
                 LinearProgressIndicator(
                     progress = { progressFactor.toFloat() },
                     modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
@@ -470,6 +665,7 @@ fun EmptyStateComponent(
 @Composable
 fun HeroSuccessCard(totalProgress: Int) {
     val primaryYellow = Color(0xFFFDD835)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -500,7 +696,9 @@ fun HeroSuccessCard(totalProgress: Int) {
                     trackColor = Color.Black.copy(0.1f)
                 )
             }
+
             Spacer(modifier = Modifier.width(20.dp))
+
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = Color.Black.copy(0.1f),
@@ -517,3 +715,71 @@ fun HeroSuccessCard(totalProgress: Int) {
     }
 }
 
+@Composable
+fun NotificationSheetContent(
+    notifications: List<NotificationEntity>,
+    onMarkAsRead: (Int) -> Unit,
+    onDelete: (Int) -> Unit,
+    onMarkAllRead: () -> Unit,
+    onClearAll: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.6f).padding(16.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Bildirimler", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Row {
+                TextButton(onClick = onMarkAllRead) { Text("Hepsini Oku", fontSize = 12.sp) }
+                TextButton(onClick = onClearAll) { Text("Temizle", color = Color.Red, fontSize = 12.sp) }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (notifications.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Bildirim bulunmuyor.", color = Color.Gray)
+            }
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(notifications) { notification ->
+                    NotificationItem(
+                        notification = notification,
+                        onMarkAsRead = { onMarkAsRead(notification.id) },
+                        onDelete = { onDelete(notification.id) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun NotificationItem(
+    notification: NotificationEntity,
+    onMarkAsRead: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = if (notification.isRead) Color(0xFFF2F2ED) else Color(0xFFFDD835).copy(alpha = 0.2f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(notification.title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(notification.message, fontSize = 12.sp)
+            }
+            if (!notification.isRead) {
+                IconButton(onClick = onMarkAsRead) {
+                    Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF4CAF50))
+                }
+            }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Gray)
+            }
+        }
+    }
+}

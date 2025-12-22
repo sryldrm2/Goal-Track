@@ -1,8 +1,8 @@
 package com.esra.goaltrackproject.presentation.detail
 
 import android.app.TimePickerDialog
-import android.widget.Space
 import android.widget.Toast
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -22,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -48,7 +49,10 @@ fun GoalDetailScreen(
     val weeklyProgress by viewModel.weeklyProgress.collectAsState()
     val dailyValue by viewModel.dailyValue.collectAsState()
     val completedDaysCount by viewModel.completedDaysCount.collectAsState()
+    val totalDays by viewModel.totalDays.collectAsState()
+    val remainingDays by viewModel.remainingDays.collectAsState()
     val context = LocalContext.current
+
 
     val backgroundLight = Color(0xFFF8F8F5)
 
@@ -80,6 +84,8 @@ fun GoalDetailScreen(
             weeklyProgress = weeklyProgress,
             dailyValue = dailyValue,
             completedDaysCount = completedDaysCount,
+            totalDays = totalDays,
+            remainingDays = remainingDays,
             modifier = Modifier.padding(padding)
         )
     }
@@ -153,140 +159,222 @@ fun GoalDetailContent(
     weeklyProgress: List<DailyProgressEntity>,
     dailyValue: Double,
     completedDaysCount: Int,
+    totalDays: Int,
+    remainingDays: Int,
     modifier: Modifier = Modifier
 ) {
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val primaryYellow = Color(0xFFFDD835)
     val progress = goal.progressPercent.toFloat() / 100f
 
-    val todayStart = remember {
-        Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
-    }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 20.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(text = goal.title, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
-        Surface(
-            color = Color.Black.copy(alpha = 0.05f),
-            shape = RoundedCornerShape(8.dp),
-            modifier = Modifier.padding(top = 8.dp)
+    if (isLandscape) {
+        // YATAY MOD
+        Row(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            Text(
-                text = goal.category.uppercase(),
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Gray
-            )
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Box(contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(
-                progress = { progress },
-                strokeWidth = 12.dp,
-                modifier = Modifier.size(180.dp),
-                color = primaryYellow,
-                trackColor = Color.Black.copy(alpha = 0.05f),
-                strokeCap = StrokeCap.Round
-            )
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "%${goal.progressPercent}",
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.Black
-                )
-                Text(text = "Toplam", fontSize = 14.sp, color = Color.Gray)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Bugün: ${dailyValue.toInt()} / ${goal.targetValue.toInt()} ${goal.unit ?: ""}",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        DayStatisticsSection(goal, completedDaysCount)
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            "Haftalık Performans",
-            modifier = Modifier.align(Alignment.Start),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-        WeeklyProgressSection(weeklyProgress = weeklyProgress, target = goal.targetValue)
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        GoalNoteCard(note = goal.note)
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        val isFutureDate = false // Dashboard'da seçilen tarih varsa kontrol buraya gelir
-
-        if (goal.measurementType == "Sayisal") {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Button(
-                    onClick = { viewModel.updateProgress(1.0) },
-                    enabled = dailyValue < goal.targetValue,
-                    modifier = Modifier.weight(1f).height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
+                Text(text = goal.title, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    color = Color.Black.copy(alpha = 0.05f),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, tint = primaryYellow)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Miktarı Artır", color = primaryYellow, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = goal.category.uppercase(),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray
+                    )
                 }
-            }
-        } else {
-            Button(
-                onClick = { viewModel.updateProgress(1.0) },
-                enabled = dailyValue < 1.0,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (dailyValue >= 1.0) Color(0xFF4CAF50) else Color.Black
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Box(contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(
+                        progress = { progress },
+                        strokeWidth = 10.dp,
+                        modifier = Modifier.size(140.dp),
+                        color = primaryYellow,
+                        trackColor = Color.Black.copy(alpha = 0.05f),
+                        strokeCap = StrokeCap.Round
+                    )
+                    Text(text = "%${goal.progressPercent}", fontSize = 28.sp, fontWeight = FontWeight.Black)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = if (goal.measurementType == "Sayisal") {
+                        "Bugün: ${dailyValue.toInt()} / ${goal.targetValue.toInt()} ${goal.unit ?: ""}"
+                    } else {
+                        if (dailyValue >= 1.0) "Bugün: Tamamlandı ✅" else "Bugün: Henüz Yapılmadı"
+                    },
                 )
+            }
+
+            Column(
+                modifier = Modifier
+                    .weight(1.2f)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                if (dailyValue >= 1.0) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color.White)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Tamamlandı", color = Color.White, fontWeight = FontWeight.Bold)
-                } else {
-                    Text("Bugünü Tamamla", color = primaryYellow, fontWeight = FontWeight.Bold)
-                }
+                Spacer(modifier = Modifier.height(16.dp))
+                DayStatisticsSection(
+                    goal = goal,
+                    completedDaysCount = completedDaysCount,
+                    totalDays = totalDays,
+                    remainingDays = remainingDays
+                    )
+                Text(
+                    "Haftalık Performans",
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                WeeklyProgressSection(weeklyProgress = weeklyProgress, target = goal.targetValue)
+                GoalNoteCard(note = goal.note)
+
+                DetailActionButton(goal, dailyValue, viewModel, primaryYellow)
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
-        Spacer(modifier = Modifier.height(40.dp))
+    } else {
+        // DİKEY MOD
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(text = goal.title, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+            Surface(
+                color = Color.Black.copy(alpha = 0.05f),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                Text(
+                    text = goal.category.uppercase(),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Gray
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Box(contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(
+                    progress = { progress },
+                    strokeWidth = 12.dp,
+                    modifier = Modifier.size(180.dp),
+                    color = primaryYellow,
+                    trackColor = Color.Black.copy(alpha = 0.05f),
+                    strokeCap = StrokeCap.Round
+                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "%${goal.progressPercent}",
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                    Text(text = "Toplam", fontSize = 14.sp, color = Color.Gray)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = if (goal.measurementType == "Sayisal") {
+                    "Bugün: ${dailyValue.toInt()} / ${goal.targetValue.toInt()} ${goal.unit ?: ""}"
+                } else {
+                    if (dailyValue >= 1.0) "Bugün: Tamamlandı ✅" else "Bugün: Henüz Yapılmadı"
+                },
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            DayStatisticsSection(
+                goal = goal,
+                completedDaysCount = completedDaysCount,
+                totalDays = totalDays,
+                remainingDays = remainingDays
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                "Haftalık Performans",
+                modifier = Modifier.align(Alignment.Start),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            WeeklyProgressSection(weeklyProgress = weeklyProgress, target = goal.targetValue)
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            GoalNoteCard(note = goal.note)
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            DetailActionButton(goal, dailyValue, viewModel, primaryYellow)
+            Spacer(modifier = Modifier.height(40.dp))
+        }
+    }
+}
+
+@Composable
+fun DetailActionButton(goal: SMARTGoalEntity, dailyValue: Double, viewModel: GoalDetailViewModel, primaryYellow: Color) {
+    if (goal.measurementType == "Sayisal") {
+        Button(
+            onClick = { viewModel.updateProgress(1.0) },
+            enabled = dailyValue < goal.targetValue,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = null, tint = primaryYellow)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Miktarı Artır", color = primaryYellow, fontWeight = FontWeight.Bold)
+        }
+    } else {
+        Button(
+            onClick = { viewModel.updateProgress(1.0) },
+            enabled = dailyValue < 1.0,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (dailyValue >= 1.0) Color(0xFF4CAF50) else Color.Black
+            )
+        ) {
+            if (dailyValue >= 1.0) {
+                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color.White)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Tamamlandı", color = Color.White, fontWeight = FontWeight.Bold)
+            } else {
+                Text("Bugünü Tamamla", color = primaryYellow, fontWeight = FontWeight.Bold)
+            }
+        }
     }
 }
 
 
 @Composable
-fun DayStatisticsSection(goal: SMARTGoalEntity, completedDaysCount: Int) {
-    val totalDays = ((goal.endDate - goal.startDate) / (1000 * 60 * 60 * 24)).toInt().coerceAtLeast(1)
-    val remainingDays = (totalDays - completedDaysCount).coerceAtLeast(0)
+fun DayStatisticsSection(
+    goal: SMARTGoalEntity,
+    completedDaysCount: Int,
+    totalDays: Int,
+    remainingDays: Int
+) {
 
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         StatCard("Tamamlanan", completedDaysCount, "Gün", Color(0xFFFDD835), Modifier.weight(1f))

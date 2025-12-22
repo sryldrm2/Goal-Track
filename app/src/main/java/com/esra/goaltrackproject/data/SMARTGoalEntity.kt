@@ -27,7 +27,10 @@ data class SMARTGoalEntity(
     val reminderHour: Int? = null,
     val reminderMinute: Int? = null,
 
-    val note: String? = null
+    val note: String? = null,
+
+    val frequency: String = "Günlük",
+    val selectedDays: String? = null
 ) {
     // Computed property - Room automatically ignores properties without backing fields
     val progressPercent: Int

@@ -39,15 +39,17 @@ class AddGoalViewModel(
         isReminderActive: Boolean,
         reminderHour: Int?,
         reminderMinute: Int?,
+        frequency: String,
+        selectedDays: Set<Int>,
         note: String? = null
     ) {
-        // --- 1. Validasyonlar ---
+        // 1. Validasyonlar
         if (title.isBlank()) {
             sendEvent(AddGoalUiEvent.ShowSnackbar("Lütfen hedefinize bir başlık yazın!"))
             return
         }
 
-        if (targetValue <= 0) {
+        if ( measurementType == "Sayisal" && targetValue <= 0) {
             sendEvent(AddGoalUiEvent.ShowSnackbar("Hedef değer 0'dan büyük olmalıdır!"))
             return
         }
@@ -58,16 +60,21 @@ class AddGoalViewModel(
             return
         }
 
-        // --- 2. Kayıt İşlemi ---
+        val selectedDaysString = if (selectedDays.isNotEmpty()) {
+            selectedDays.sorted().joinToString(",")
+        } else null
+
+        // 2. Kayıt İşlemi
         viewModelScope.launch {
             try {
+                val finalTargetValue = if (measurementType == "Tamamlanma") 1.0 else targetValue
                 val goal = SMARTGoalEntity(
                     title = title,
                     description = description,
                     measurementType = measurementType,
-                    unit = unit,
+                    unit = if (measurementType == "Tamamlanma") "Adet" else unit,
                     category = category,
-                    targetValue = targetValue,
+                    targetValue = finalTargetValue,
                     currentValue = 0.0,
                     startDate = System.currentTimeMillis(),
                     endDate = endDate,
@@ -75,21 +82,20 @@ class AddGoalViewModel(
                     isReminderActive = isReminderActive,
                     reminderHour = reminderHour,
                     reminderMinute = reminderMinute,
+                    frequency = frequency,
+                    selectedDays = selectedDaysString,
                     note = note
                 )
 
                 val goalId = goalDao.insertGoal(goal)
 
-                // Başarılı kayıttan sonra hatırlatıcı planla
                 if (isReminderActive && reminderHour != null && reminderMinute != null) {
                     scheduleDailyReminder(goalId.toInt(), title, reminderHour, reminderMinute)
                 }
 
-                // UI'a başarı mesajı gönder
                 _uiEvent.send(AddGoalUiEvent.Success)
 
             } catch (e: Exception) {
-                android.util.Log.e("AddGoalViewModel", "Hedef kaydedilirken hata oluştu", e)
                 _uiEvent.send(AddGoalUiEvent.ShowSnackbar("Hedef kaydedilirken bir hata oluştu."))
             }
         }

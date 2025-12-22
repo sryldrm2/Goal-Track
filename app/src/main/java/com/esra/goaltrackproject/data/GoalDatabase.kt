@@ -6,12 +6,13 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [SMARTGoalEntity::class, DailyProgressEntity::class],
-    version = 5,
+    entities = [SMARTGoalEntity::class, DailyProgressEntity::class, NotificationEntity::class],
+    version = 7,
     exportSchema = false
 )
 abstract class GoalDatabase : RoomDatabase() {
     abstract fun goalDao(): GoalDao
+    abstract fun notificationDao(): NotificationDao
 
     companion object {
         @Volatile

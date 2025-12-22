@@ -37,6 +37,12 @@ class GoalDetailViewModel(
     private val _completedDaysCount = MutableStateFlow(0)
     val completedDaysCount: StateFlow<Int> = _completedDaysCount
 
+    private val _totalDays = MutableStateFlow(0)
+    val totalDays: StateFlow<Int> = _totalDays
+
+    private val _remainingDays = MutableStateFlow(0)
+    val remainingDays: StateFlow<Int> = _remainingDays
+
     fun loadGoal(goalId: Int) {
         viewModelScope.launch {
             val loadedGoal = goalDao.getGoalById(goalId)
@@ -44,8 +50,23 @@ class GoalDetailViewModel(
             if (loadedGoal != null) {
                 refreshDailyValue()
                 refreshCompletedDaysCount()
+                calculateTimeMetrics(loadedGoal)
             }
         }
+    }
+
+    private fun calculateTimeMetrics(goal: SMARTGoalEntity) {
+        val now = System.currentTimeMillis()
+        val start = goal.startDate
+        val end = goal.endDate
+
+        val totalDiff = end - start
+        val totalInDays = (totalDiff / (1000 * 60 * 60 * 24)).toInt().coerceAtLeast(1)
+        _totalDays.value = totalInDays
+
+        val remainingDiff = end - now
+        val remainingInDays = (remainingDiff / (1000 * 60 * 60 * 24)).toInt().coerceAtLeast(0)
+        _remainingDays.value = remainingInDays
     }
 
     private fun refreshCompletedDaysCount() {
@@ -75,20 +96,16 @@ class GoalDetailViewModel(
                 
                 // Günlük limit kontrolü
                 if (currentGoal.measurementType == "Sayisal") {
-                    // Sayısal hedefler için günlük hedef kontrolü
                     if (currentDailyValue >= currentGoal.targetValue) {
-                        // Günlük hedefe ulaşılmış, daha fazla artırma yapılamaz
                         return@launch
                     }
                 } else {
-                    // Tamamlanma hedefleri için: Zaten yapıldıysa tekrar yapma
                     if (currentDailyValue > 0) {
                         return@launch
                     }
                 }
                 
                 val newDailyValue = if (currentGoal.measurementType == "Sayisal") {
-                    // Sayısal: Günlük değeri artır
                     (currentDailyValue + incrementValue).coerceAtMost(currentGoal.targetValue)
                 } else {
                     // Tamamlanma: 1.0 olarak işaretle
@@ -104,13 +121,11 @@ class GoalDetailViewModel(
                 
                 val isNowCompleted = nextTotalValue >= currentGoal.targetValue
 
-                // Hedefi güncelle
                 goalDao.updateGoal(currentGoal.copy(
                     currentValue = nextTotalValue,
                     isCompleted = isNowCompleted
                 ))
 
-                // Günlük progress'i kaydet
                 goalDao.insertDailyProgress(
                     DailyProgressEntity(
                         goalId = currentGoal.id,
@@ -119,13 +134,11 @@ class GoalDetailViewModel(
                     )
                 )
 
-                // State'leri güncelle
                 _dailyValue.value = newDailyValue
                 _goal.value = currentGoal.copy(
                     currentValue = nextTotalValue,
                     isCompleted = isNowCompleted
                 )
-                // Tamamlanan gün sayısını güncelle
                 refreshCompletedDaysCount()
             } catch (e: Exception) {
                 android.util.Log.e("GoalDetailVM", "Progress hatası: ${e.message}")
