@@ -48,6 +48,6 @@ class UserPreferences(context: Context) {
     }
 
     fun getNotificationsEnabled(): Boolean {
-        return sharedPreferences.getBoolean("notifications_enabled", true) // Varsayılan olarak açık
+        return sharedPreferences.getBoolean("notifications_enabled", true)
     }
 }

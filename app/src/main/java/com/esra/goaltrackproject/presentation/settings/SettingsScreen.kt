@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -22,6 +24,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalConfiguration
 import com.esra.goaltrackproject.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,77 +78,153 @@ fun SettingsScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .background(colorScheme.background)
-        ) {
-            item { SettingsSectionTitle("Profil Ayarları") }
-            item {
-                SettingsItem(
-                    title = "Profil Bilgileri",
-                    subtitle = viewModel.userName,
-                    icon = Icons.Default.Person,
-                    onClick = { showEditDialog = true }
-                )
-            }
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
-            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp) }
-
-            // 2. Uygulama Ayarları
-            item { SettingsSectionTitle("Uygulama Ayarları") }
-            item {
-                SettingsSwitchItem(
-                    title = "Bildirimler",
-                    subtitle = "Günlük hedeflerini hatırlat",
-                    icon = Icons.Default.Notifications,
-                    checked = viewModel.notificationsEnabled,
-                    onCheckedChange = { viewModel.updateNotificationsEnabled(it) }
-                )
+        if (isLandscape) {
+            // YATAY MOD
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    SettingsSectionTitle("Profil Ayarları")
+                    SettingsItem(
+                        title = "Profil Bilgileri",
+                        subtitle = viewModel.userName,
+                        icon = Icons.Default.Person,
+                        onClick = { showEditDialog = true }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
+                    
+                    SettingsSectionTitle("Uygulama Ayarları")
+                    SettingsSwitchItem(
+                        title = "Bildirimler",
+                        subtitle = "Günlük hedeflerini hatırlat",
+                        icon = Icons.Default.Notifications,
+                        checked = viewModel.notificationsEnabled,
+                        onCheckedChange = { viewModel.updateNotificationsEnabled(it) }
+                    )
+                    SettingsItem(
+                        title = "Görünüm",
+                        subtitle = when(viewModel.themeMode) {
+                            1 -> "Açık Mod"
+                            2 -> "Karanlık Mod"
+                            else -> "Sistem Varsayılanı"
+                        },
+                        icon = Icons.Default.Palette,
+                        onClick = { showThemeDialog = true }
+                    )
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    SettingsSectionTitle("Hakkında")
+                    SettingsItem(
+                        title = "Uygulama Versiyonu",
+                        subtitle = "1.0.0",
+                        icon = Icons.Default.Info,
+                        onClick = {}
+                    )
+                    SettingsItem(
+                        title = "Gizlilik Politikası",
+                        icon = Icons.Default.PrivacyTip,
+                        onClick = {}
+                    )
+                    SettingsItem(
+                        title = "Geri Bildirim",
+                        icon = Icons.Default.Email,
+                        onClick = {}
+                    )
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
             }
+        } else {
+            // DİKEY MOD
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .background(colorScheme.background)
+            ) {
+                item { SettingsSectionTitle("Profil Ayarları") }
+                item {
+                    SettingsItem(
+                        title = "Profil Bilgileri",
+                        subtitle = viewModel.userName,
+                        icon = Icons.Default.Person,
+                        onClick = { showEditDialog = true }
+                    )
+                }
 
-            item {
-                SettingsItem(
-                    title = "Görünüm",
-                    subtitle = when(viewModel.themeMode) {
-                        1 -> "Açık Mod"
-                        2 -> "Karanlık Mod"
-                        else -> "Sistem Varsayılanı"
-                    },
-                    icon = Icons.Default.Palette,
-                    onClick = { showThemeDialog = true }
-                )
-            }
+                item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp) }
 
-            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp) }
+                // 2. Uygulama Ayarları
+                item { SettingsSectionTitle("Uygulama Ayarları") }
+                item {
+                    SettingsSwitchItem(
+                        title = "Bildirimler",
+                        subtitle = "Günlük hedeflerini hatırlat",
+                        icon = Icons.Default.Notifications,
+                        checked = viewModel.notificationsEnabled,
+                        onCheckedChange = { viewModel.updateNotificationsEnabled(it) }
+                    )
+                }
 
-            // 3. Hakkında ve Destek
-            item { SettingsSectionTitle("Hakkında") }
-            item {
-                SettingsItem(
-                    title = "Uygulama Versiyonu",
-                    subtitle = "1.0.0",
-                    icon = Icons.Default.Info,
-                    onClick = {}
-                )
-            }
-            item {
-                SettingsItem(
-                    title = "Gizlilik Politikası",
-                    icon = Icons.Default.PrivacyTip,
-                    onClick = {}
-                )
-            }
-            item {
-                SettingsItem(
-                    title = "Geri Bildirim",
-                    icon = Icons.Default.Email,
-                    onClick = {}
-                )
-            }
+                item {
+                    SettingsItem(
+                        title = "Görünüm",
+                        subtitle = when(viewModel.themeMode) {
+                            1 -> "Açık Mod"
+                            2 -> "Karanlık Mod"
+                            else -> "Sistem Varsayılanı"
+                        },
+                        icon = Icons.Default.Palette,
+                        onClick = { showThemeDialog = true }
+                    )
+                }
 
-            item { Spacer(modifier = Modifier.height(32.dp)) }
+                item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp) }
+
+                // 3. Hakkında ve Destek
+                item { SettingsSectionTitle("Hakkında") }
+                item {
+                    SettingsItem(
+                        title = "Uygulama Versiyonu",
+                        subtitle = "1.0.0",
+                        icon = Icons.Default.Info,
+                        onClick = {}
+                    )
+                }
+                item {
+                    SettingsItem(
+                        title = "Gizlilik Politikası",
+                        icon = Icons.Default.PrivacyTip,
+                        onClick = {}
+                    )
+                }
+                item {
+                    SettingsItem(
+                        title = "Geri Bildirim",
+                        icon = Icons.Default.Email,
+                        onClick = {}
+                    )
+                }
+
+                item { Spacer(modifier = Modifier.height(32.dp)) }
+            }
         }
     }
 }
@@ -227,8 +306,14 @@ fun EditProfileDialog(
     var tempAvatar by remember { mutableIntStateOf(currentAvatar) }
 
     val avatarList = listOf(
-        R.drawable.avatar1, R.drawable.avatar2, R.drawable.avatar3, R.drawable.avatar4,
-        R.drawable.avatar5, R.drawable.avatar6, R.drawable.avatar7, R.drawable.avatar8
+        R.drawable.avatar1,
+        R.drawable.avatar2,
+        R.drawable.avatar3,
+        R.drawable.avatar4,
+        R.drawable.avatar5,
+        R.drawable.avatar6,
+        R.drawable.avatar7,
+        R.drawable.avatar8
     )
 
     AlertDialog(

@@ -32,7 +32,6 @@ data class SMARTGoalEntity(
     val frequency: String = "Günlük",
     val selectedDays: String? = null
 ) {
-    // Computed property - Room automatically ignores properties without backing fields
     val progressPercent: Int
         get() = if (targetValue > 0) {
             ((currentValue.toFloat() / targetValue.toFloat()) * 100)

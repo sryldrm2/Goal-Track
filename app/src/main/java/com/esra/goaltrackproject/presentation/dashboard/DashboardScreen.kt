@@ -327,7 +327,7 @@ fun DashboardScreen(
                 // 2. Başarı Kartı (Hero Card)
                 item { HeroSuccessCard(totalProgress = state.totalProgressPercent) }
 
-                // --- 3. KAYDIRILABİLİR TARİH ŞERİDİ ---
+                // 3. KAYDIRILABİLİR TARİH ŞERİDİ
                 item {
                     val weekDays = remember { getCurrentWeek() }
                     val listState = rememberLazyListState()
