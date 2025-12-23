@@ -26,6 +26,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalConfiguration
 import com.esra.goaltrackproject.R
+import com.esra.goaltrackproject.presentation.components.common.SettingsItem
+import com.esra.goaltrackproject.presentation.components.common.SettingsSwitchItem
+import com.esra.goaltrackproject.presentation.components.settings.EditProfileDialog
+import com.esra.goaltrackproject.presentation.components.settings.ThemeSelectionDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,30 +86,28 @@ fun SettingsScreen(
         val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
         if (isLandscape) {
-            // YATAY MOD
-            Row(
+            // YATAY MOD - TEK KOLON
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(24.dp)
+                    .background(colorScheme.background)
             ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    SettingsSectionTitle("Profil Ayarları")
+                item { SettingsSectionTitle("Profil Ayarları") }
+                item {
                     SettingsItem(
                         title = "Profil Bilgileri",
                         subtitle = viewModel.userName,
                         icon = Icons.Default.Person,
                         onClick = { showEditDialog = true }
                     )
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
-                    
-                    SettingsSectionTitle("Uygulama Ayarları")
+                }
+
+                item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp) }
+
+                // Uygulama Ayarları
+                item { SettingsSectionTitle("Uygulama Ayarları") }
+                item {
                     SettingsSwitchItem(
                         title = "Bildirimler",
                         subtitle = "Günlük hedeflerini hatırlat",
@@ -113,6 +115,9 @@ fun SettingsScreen(
                         checked = viewModel.notificationsEnabled,
                         onCheckedChange = { viewModel.updateNotificationsEnabled(it) }
                     )
+                }
+
+                item {
                     SettingsItem(
                         title = "Görünüm",
                         subtitle = when(viewModel.themeMode) {
@@ -123,33 +128,36 @@ fun SettingsScreen(
                         icon = Icons.Default.Palette,
                         onClick = { showThemeDialog = true }
                     )
-                    Spacer(modifier = Modifier.height(32.dp))
                 }
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    SettingsSectionTitle("Hakkında")
+
+                item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp) }
+
+                // Hakkında ve Destek
+                item { SettingsSectionTitle("Hakkında") }
+                item {
                     SettingsItem(
                         title = "Uygulama Versiyonu",
                         subtitle = "1.0.0",
                         icon = Icons.Default.Info,
                         onClick = {}
                     )
+                }
+                item {
                     SettingsItem(
                         title = "Gizlilik Politikası",
                         icon = Icons.Default.PrivacyTip,
                         onClick = {}
                     )
+                }
+                item {
                     SettingsItem(
                         title = "Geri Bildirim",
                         icon = Icons.Default.Email,
                         onClick = {}
                     )
-                    Spacer(modifier = Modifier.height(32.dp))
                 }
+
+                item { Spacer(modifier = Modifier.height(32.dp)) }
             }
         } else {
             // DİKEY MOD
@@ -240,154 +248,3 @@ fun SettingsSectionTitle(title: String) {
     )
 }
 
-@Composable
-fun SettingsItem(
-    title: String,
-    subtitle: String? = null,
-    icon: ImageVector,
-    onClick: () -> Unit
-) {
-    ListItem(
-        headlineContent = {
-            Text(title, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-        },
-        supportingContent = subtitle?.let {
-            { Text(it, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)) }
-        },
-        leadingContent = {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-        },
-        trailingContent = {
-            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
-        },
-        modifier = Modifier.clickable { onClick() }
-    )
-}
-
-@Composable
-fun SettingsSwitchItem(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    ListItem(
-        headlineContent = {
-            Text(title, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-        },
-        supportingContent = {
-            Text(subtitle, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
-        },
-        leadingContent = {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-        },
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary
-                )
-            )
-        }
-    )
-}
-
-@Composable
-fun EditProfileDialog(
-    currentName: String,
-    currentAvatar: Int,
-    onDismiss: () -> Unit,
-    onSave: (String, Int) -> Unit
-) {
-    var tempName by remember { mutableStateOf(currentName) }
-    var tempAvatar by remember { mutableIntStateOf(currentAvatar) }
-
-    val avatarList = listOf(
-        R.drawable.avatar1,
-        R.drawable.avatar2,
-        R.drawable.avatar3,
-        R.drawable.avatar4,
-        R.drawable.avatar5,
-        R.drawable.avatar6,
-        R.drawable.avatar7,
-        R.drawable.avatar8
-    )
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Profili Düzenle", fontWeight = FontWeight.Bold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                // İsim Alanı
-                OutlinedTextField(
-                    value = tempName,
-                    onValueChange = { tempName = it },
-                    label = { Text("Adınız") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                // Avatar Seçimi (Yatay Kaydırılabilir)
-                Text("Avatar Seç", style = MaterialTheme.typography.labelLarge)
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(avatarList) { avatar ->
-                        val isSelected = tempAvatar == avatar
-                        Image(
-                            painter = painterResource(id = avatar),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(60.dp)
-                                .clip(CircleShape)
-                                .border(
-                                    width = if (isSelected) 3.dp else 1.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.LightGray,
-                                    shape = CircleShape
-                                )
-                                .clickable { tempAvatar = avatar }
-                                .padding(4.dp)
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(onClick = { onSave(tempName, tempAvatar) }) {
-                Text("Kaydet")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("İptal") }
-        }
-    )
-}
-
-@Composable
-fun ThemeSelectionDialog(
-    currentMode: Int,
-    onDismiss: () -> Unit,
-    onSelect: (Int) -> Unit
-) {
-    val options = listOf("Sistem Varsayılanı", "Açık Mod", "Karanlık Mod")
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Görünüm Seçin") },
-        text = {
-            Column {
-                options.forEachIndexed { index, label ->
-                    Row(
-                        Modifier.fillMaxWidth().clickable { onSelect(index) }.padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(selected = currentMode == index, onClick = { onSelect(index) })
-                        Text(label, modifier = Modifier.padding(start = 8.dp))
-                    }
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Kapat") } }
-    )
-}

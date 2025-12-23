@@ -2,6 +2,7 @@ package com.esra.goaltrackproject.presentation.dashboard
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Work
@@ -41,9 +42,11 @@ data class DashboardUiState(
     val dailyValueMap: Map<Int, Double> = emptyMap(),
     val categories: List<Pair<String, ImageVector>> = listOf(
         "Tümü" to Icons.Default.GridView,
+        "Genel" to Icons.Default.GridView,
         "Sağlık" to Icons.Default.Favorite,
         "İş" to Icons.Default.Work,
-        "Eğitim" to Icons.Default.School
+        "Eğitim" to Icons.Default.School,
+        "Spor" to Icons.Default.FitnessCenter
     ),
     val notifications: List<NotificationEntity> = emptyList(),
     val unreadNotificationCount: Int = 0,

@@ -142,21 +142,25 @@ fun WelcomeStep(onNext: () -> Unit) {
 fun NameInputStep(name: String, onNameChange: (String) -> Unit, onNext: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp)
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.weight(0.6f))
         Text(
             text = "Sana nasıl\nhitap edebilirim?",
             fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.Black,
             color = colorScheme.onBackground,
-            lineHeight = 44.sp
+            lineHeight = 38.sp,
+            textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         Text(
             text = "Deneyiminizi kişiselleştirmek için adınıza ihtiyacımız var.",
-            fontSize = 14.sp,
-            color = colorScheme.onBackground.copy(alpha = 0.5f)
+            fontSize = 16.sp,
+            color = colorScheme.onBackground.copy(alpha = 0.6f),
+            textAlign = TextAlign.Center,
+            lineHeight = 24.sp
         )
         Spacer(modifier = Modifier.height(48.dp))
         OutlinedTextField(
