@@ -30,4 +30,24 @@ class UserPreferences(context: Context) {
     fun isOnboardingCompleted(): Boolean {
         return sharedPreferences.getBoolean("onboarding_complete", false)
     }
+
+    fun saveThemeMode(mode: Int) {
+        sharedPreferences.edit().putInt("theme_mode", mode).commit()
+    }
+
+    fun getThemeMode(): Int {
+        return sharedPreferences.getInt("theme_mode", 0)
+    }
+
+    fun getSharedPreferences(): SharedPreferences {
+        return sharedPreferences
+    }
+
+    fun saveNotificationsEnabled(enabled: Boolean) {
+        sharedPreferences.edit().putBoolean("notifications_enabled", enabled).commit()
+    }
+
+    fun getNotificationsEnabled(): Boolean {
+        return sharedPreferences.getBoolean("notifications_enabled", true) // Varsayılan olarak açık
+    }
 }

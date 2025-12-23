@@ -21,6 +21,8 @@ import com.esra.goaltrackproject.presentation.detail.GoalDetailScreen
 import com.esra.goaltrackproject.presentation.detail.GoalDetailViewModel
 import com.esra.goaltrackproject.presentation.CustomViewModelFactory
 import com.esra.goaltrackproject.presentation.onboarding.OnBoardingScreen
+import com.esra.goaltrackproject.presentation.settings.SettingsScreen
+import com.esra.goaltrackproject.presentation.settings.SettingsViewModel
 
 @Composable
 fun GoalNavGraph(goalDao: GoalDao) {
@@ -67,6 +69,9 @@ fun GoalNavGraph(goalDao: GoalDao) {
                 },
                 onAddGoalClick = {
                     navController.navigate(Routes.ADD_GOAL)
+                },
+                onSettingsClick = {
+                    navController.navigate(Routes.SETTINGS)
                 }
             )
         }
@@ -98,6 +103,16 @@ fun GoalNavGraph(goalDao: GoalDao) {
                 onDeleteSuccess = {
                     navController.popBackStack(Routes.DASHBOARD, inclusive = false)
                 },
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(Routes.SETTINGS) {
+            val viewModel: SettingsViewModel = viewModel(factory = factory)
+            SettingsScreen(
+                viewModel = viewModel,
                 onNavigateBack = {
                     navController.popBackStack()
                 }

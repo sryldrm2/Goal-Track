@@ -7,9 +7,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
+import android.content.SharedPreferences
 import androidx.core.content.ContextCompat
 import com.esra.goaltrackproject.data.GoalDatabase
+import com.esra.goaltrackproject.data.UserPreferences
 import com.esra.goaltrackproject.presentation.navigation.GoalNavGraph
 import com.esra.goaltrackproject.ui.theme.GoalTrackProjectTheme
 
@@ -29,7 +31,25 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            GoalTrackProjectTheme {
+            val userPreferences = remember { UserPreferences(this@MainActivity) }
+            var themeMode by remember { mutableIntStateOf(userPreferences.getThemeMode()) }
+
+            // SharedPreferences değişikliklerini dinle
+            DisposableEffect(userPreferences) {
+                val prefs = userPreferences.getSharedPreferences()
+                val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                    if (key == "theme_mode") {
+                        themeMode = userPreferences.getThemeMode()
+                    }
+                }
+                prefs.registerOnSharedPreferenceChangeListener(listener)
+                
+                onDispose {
+                    prefs.unregisterOnSharedPreferenceChangeListener(listener)
+                }
+            }
+
+            GoalTrackProjectTheme(themeMode = themeMode) {
                 val database = remember { GoalDatabase.getDatabase(this@MainActivity) }
                 val goalDao = remember { database.goalDao() }
                 

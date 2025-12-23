@@ -5,9 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.esra.goaltrackproject.data.GoalDao
 import com.esra.goaltrackproject.data.NotificationDao
+import com.esra.goaltrackproject.data.UserPreferences
 import com.esra.goaltrackproject.presentation.addgoal.AddGoalViewModel
 import com.esra.goaltrackproject.presentation.dashboard.DashboardViewModel
 import com.esra.goaltrackproject.presentation.detail.GoalDetailViewModel
+import com.esra.goaltrackproject.presentation.settings.SettingsViewModel
 
 class CustomViewModelFactory(
     private val application: Application,
@@ -25,6 +27,12 @@ class CustomViewModelFactory(
             }
             modelClass.isAssignableFrom(GoalDetailViewModel::class.java) -> {
                 GoalDetailViewModel(application, goalDao) as T
+            }
+            modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
+                SettingsViewModel(
+                    userPreferences = UserPreferences(application),
+                    goalDao = goalDao
+                ) as T
             }
             else -> throw IllegalArgumentException("Bilinmeyen ViewModel Sınıfı: ${modelClass.name}")
         }

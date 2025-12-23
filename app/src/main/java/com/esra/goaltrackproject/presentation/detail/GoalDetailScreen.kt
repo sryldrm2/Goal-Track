@@ -52,22 +52,20 @@ fun GoalDetailScreen(
     val totalDays by viewModel.totalDays.collectAsState()
     val remainingDays by viewModel.remainingDays.collectAsState()
     val context = LocalContext.current
-
-
-    val backgroundLight = Color(0xFFF8F8F5)
+    val colorScheme = MaterialTheme.colorScheme
 
     if (goal == null) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            CircularProgressIndicator(color = Color(0xFFFDD835))
+            CircularProgressIndicator(color = colorScheme.secondary)
         }
         return
     }
 
     Scaffold(
-        containerColor = backgroundLight,
+        containerColor = colorScheme.background,
         topBar = {
             GoalDetailAppBar(
                 goal = goal!!,
@@ -133,17 +131,18 @@ fun GoalDetailAppBar(
         )
     }
 
+    val colorScheme = MaterialTheme.colorScheme
     TopAppBar(
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF8F8F5)),
-        title = { Text(text = "Hedef Detayı", fontWeight = FontWeight.Bold) },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = colorScheme.background),
+        title = { Text(text = "Hedef Detayı", fontWeight = FontWeight.Bold, color = colorScheme.onBackground) },
         navigationIcon = {
             IconButton(onClick = onNavigateBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Geri")
+                Icon(Icons.Default.ArrowBack, contentDescription = "Geri", tint = colorScheme.onBackground)
             }
         },
         actions = {
             IconButton(onClick = { showEditSheet = true }) {
-                Icon(Icons.Default.Edit, contentDescription = "Düzenle", tint = Color.Black)
+                Icon(Icons.Default.Edit, contentDescription = "Düzenle", tint = colorScheme.onBackground)
             }
             IconButton(onClick = { showDeleteDialog = true }) {
                 Icon(Icons.Default.Delete, contentDescription = "Sil", tint = Color.Red)
@@ -165,7 +164,7 @@ fun GoalDetailContent(
 ) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val primaryYellow = Color(0xFFFDD835)
+    val colorScheme = MaterialTheme.colorScheme
     val progress = goal.progressPercent.toFloat() / 100f
 
     if (isLandscape) {
@@ -181,10 +180,10 @@ fun GoalDetailContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(text = goal.title, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+                Text(text = goal.title, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = colorScheme.onBackground)
                 Spacer(modifier = Modifier.height(8.dp))
                 Surface(
-                    color = Color.Black.copy(alpha = 0.05f),
+                    color = colorScheme.onBackground.copy(alpha = 0.05f),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
@@ -192,7 +191,7 @@ fun GoalDetailContent(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Gray
+                        color = colorScheme.onBackground.copy(alpha = 0.6f)
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -202,11 +201,11 @@ fun GoalDetailContent(
                         progress = { progress },
                         strokeWidth = 10.dp,
                         modifier = Modifier.size(140.dp),
-                        color = primaryYellow,
-                        trackColor = Color.Black.copy(alpha = 0.05f),
+                        color = colorScheme.secondary,
+                        trackColor = colorScheme.onBackground.copy(alpha = 0.05f),
                         strokeCap = StrokeCap.Round
                     )
-                    Text(text = "%${goal.progressPercent}", fontSize = 28.sp, fontWeight = FontWeight.Black)
+                    Text(text = "%${goal.progressPercent}", fontSize = 28.sp, fontWeight = FontWeight.Black, color = colorScheme.onBackground)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
@@ -215,6 +214,7 @@ fun GoalDetailContent(
                     } else {
                         if (dailyValue >= 1.0) "Bugün: Tamamlandı ✅" else "Bugün: Henüz Yapılmadı"
                     },
+                    color = colorScheme.onBackground
                 )
             }
 
@@ -240,7 +240,7 @@ fun GoalDetailContent(
                 WeeklyProgressSection(weeklyProgress = weeklyProgress, target = goal.targetValue)
                 GoalNoteCard(note = goal.note)
 
-                DetailActionButton(goal, dailyValue, viewModel, primaryYellow)
+                DetailActionButton(goal, dailyValue, viewModel)
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
@@ -255,9 +255,9 @@ fun GoalDetailContent(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(text = goal.title, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+            Text(text = goal.title, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = colorScheme.onBackground)
             Surface(
-                color = Color.Black.copy(alpha = 0.05f),
+                color = colorScheme.onBackground.copy(alpha = 0.05f),
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.padding(top = 8.dp)
             ) {
@@ -266,7 +266,7 @@ fun GoalDetailContent(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Gray
+                    color = colorScheme.onBackground.copy(alpha = 0.6f)
                 )
             }
 
@@ -277,17 +277,18 @@ fun GoalDetailContent(
                     progress = { progress },
                     strokeWidth = 12.dp,
                     modifier = Modifier.size(180.dp),
-                    color = primaryYellow,
-                    trackColor = Color.Black.copy(alpha = 0.05f),
+                    color = colorScheme.secondary,
+                    trackColor = colorScheme.onBackground.copy(alpha = 0.05f),
                     strokeCap = StrokeCap.Round
                 )
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = "%${goal.progressPercent}",
                         fontSize = 36.sp,
-                        fontWeight = FontWeight.Black
+                        fontWeight = FontWeight.Black,
+                        color = colorScheme.onBackground
                     )
-                    Text(text = "Toplam", fontSize = 14.sp, color = Color.Gray)
+                    Text(text = "Toplam", fontSize = 14.sp, color = colorScheme.onBackground.copy(alpha = 0.6f))
                 }
             }
 
@@ -299,6 +300,7 @@ fun GoalDetailContent(
                 } else {
                     if (dailyValue >= 1.0) "Bugün: Tamamlandı ✅" else "Bugün: Henüz Yapılmadı"
                 },
+                color = colorScheme.onBackground
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -326,25 +328,26 @@ fun GoalDetailContent(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            DetailActionButton(goal, dailyValue, viewModel, primaryYellow)
+            DetailActionButton(goal, dailyValue, viewModel)
             Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
 
 @Composable
-fun DetailActionButton(goal: SMARTGoalEntity, dailyValue: Double, viewModel: GoalDetailViewModel, primaryYellow: Color) {
+fun DetailActionButton(goal: SMARTGoalEntity, dailyValue: Double, viewModel: GoalDetailViewModel) {
+    val colorScheme = MaterialTheme.colorScheme
     if (goal.measurementType == "Sayisal") {
         Button(
             onClick = { viewModel.updateProgress(1.0) },
             enabled = dailyValue < goal.targetValue,
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
+            colors = ButtonDefaults.buttonColors(containerColor = colorScheme.primary)
         ) {
-            Icon(Icons.Default.Add, contentDescription = null, tint = primaryYellow)
+            Icon(Icons.Default.Add, contentDescription = null, tint = colorScheme.onPrimary)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Miktarı Artır", color = primaryYellow, fontWeight = FontWeight.Bold)
+            Text("Miktarı Artır", color = colorScheme.onPrimary, fontWeight = FontWeight.Bold)
         }
     } else {
         Button(
@@ -353,7 +356,7 @@ fun DetailActionButton(goal: SMARTGoalEntity, dailyValue: Double, viewModel: Goa
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (dailyValue >= 1.0) Color(0xFF4CAF50) else Color.Black
+                containerColor = if (dailyValue >= 1.0) Color(0xFF4CAF50) else colorScheme.primary
             )
         ) {
             if (dailyValue >= 1.0) {
@@ -361,7 +364,7 @@ fun DetailActionButton(goal: SMARTGoalEntity, dailyValue: Double, viewModel: Goa
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Tamamlandı", color = Color.White, fontWeight = FontWeight.Bold)
             } else {
-                Text("Bugünü Tamamla", color = primaryYellow, fontWeight = FontWeight.Bold)
+                Text("Bugünü Tamamla", color = colorScheme.onPrimary, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -376,9 +379,10 @@ fun DayStatisticsSection(
     remainingDays: Int
 ) {
 
+    val colorScheme = MaterialTheme.colorScheme
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        StatCard("Tamamlanan", completedDaysCount, "Gün", Color(0xFFFDD835), Modifier.weight(1f))
-        StatCard("Toplam", totalDays, "Gün", Color(0xFF475569), Modifier.weight(1f))
+        StatCard("Tamamlanan", completedDaysCount, "Gün", colorScheme.secondary, Modifier.weight(1f))
+        StatCard("Toplam", totalDays, "Gün", colorScheme.primary, Modifier.weight(1f))
         StatCard("Kalan", remainingDays, "Gün", Color(0xFFEF4444), Modifier.weight(1f))
     }
 }
@@ -407,15 +411,16 @@ fun WeeklyProgressSection(
             val dayData = weeklyProgress.find { it.date == timestamp }
             val isDone = dayData != null && dayData.value >= target
 
+            val colorScheme = MaterialTheme.colorScheme
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Surface(
                     shape = CircleShape,
-                    color = if (isDone) Color(0xFF4CAF50) else Color.Black.copy(alpha = 0.05f),
+                    color = if (isDone) Color(0xFF4CAF50) else colorScheme.onBackground.copy(alpha = 0.05f),
                     modifier = Modifier.size(38.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         if (isDone) Icon(Icons.Default.Check, null, modifier = Modifier.size(20.dp), tint = Color.White)
-                        else Text(days[index], fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        else Text(days[index], fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colorScheme.onBackground)
                     }
                 }
             }
@@ -426,17 +431,18 @@ fun WeeklyProgressSection(
 
 @Composable
 fun GoalNoteCard(note: String?) {
+    val colorScheme = MaterialTheme.colorScheme
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFDD835).copy(alpha = 0.1f))
+        colors = CardDefaults.cardColors(containerColor = colorScheme.secondary.copy(alpha = 0.1f))
     ) {
         Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Lightbulb, contentDescription = null, tint = Color(0xFFFDD835))
+            Icon(Icons.Default.Lightbulb, contentDescription = null, tint = colorScheme.secondary)
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text("Notum", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text(text = if (note.isNullOrBlank()) "Henüz not yok." else note, fontSize = 13.sp)
+                Text("Notum", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colorScheme.onSurface)
+                Text(text = if (note.isNullOrBlank()) "Henüz not yok." else note, fontSize = 13.sp, color = colorScheme.onSurface.copy(alpha = 0.7f))
             }
         }
     }
@@ -444,9 +450,10 @@ fun GoalNoteCard(note: String?) {
 
 @Composable
 fun StatCard(title: String, value: Int, unit: String, color: Color, modifier: Modifier = Modifier) {
+    val colorScheme = MaterialTheme.colorScheme
     Card(
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier.height(100.dp)
     ) {
@@ -456,7 +463,7 @@ fun StatCard(title: String, value: Int, unit: String, color: Color, modifier: Mo
             verticalArrangement = Arrangement.Center
         ) {
             Text(text = "$value", fontSize = 22.sp, fontWeight = FontWeight.Black, color = color)
-            Text(text = title, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+            Text(text = title, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colorScheme.onSurface.copy(alpha = 0.6f))
         }
     }
 }
@@ -471,11 +478,15 @@ fun EditGoalBottomSheet(
     val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState()
 
+    val colorScheme = MaterialTheme.colorScheme
     var editedTitle by remember { mutableStateOf(goal.title) }
     var editedTargetValue by remember { mutableStateOf(goal.targetValue.toString()) }
+    var editedUnit by remember { mutableStateOf(goal.unit ?: "") }
+    var editedDescription by remember { mutableStateOf(goal.note ?: "") }
     var isReminderActive by remember { mutableStateOf(goal.isReminderActive) }
     var selectedHour by remember { mutableStateOf(goal.reminderHour ?: 12) }
     var selectedMinute by remember { mutableStateOf(goal.reminderMinute ?: 0) }
+    val isNumericGoal = goal.measurementType == "Sayisal"
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -495,18 +506,58 @@ fun EditGoalBottomSheet(
                 value = editedTitle,
                 onValueChange = { editedTitle = it },
                 label = { Text("Hedef Başlığı") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = colorScheme.primary,
+                    unfocusedBorderColor = colorScheme.outline
+                )
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
+            // Sadece sayısal hedefler için hedef değer ve birim göster
+            if (isNumericGoal) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = editedTargetValue,
+                        onValueChange = { editedTargetValue = it },
+                        label = { Text("Hedef Değer") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number
+                        ),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = colorScheme.primary,
+                            unfocusedBorderColor = colorScheme.outline
+                        )
+                    )
+                    OutlinedTextField(
+                        value = editedUnit,
+                        onValueChange = { editedUnit = it },
+                        label = { Text("Birim") },
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = colorScheme.primary,
+                            unfocusedBorderColor = colorScheme.outline
+                        )
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Açıklama/Not alanı
             OutlinedTextField(
-                value = editedTargetValue,
-                onValueChange = { editedTargetValue = it },
-                label = { Text("Hedef Değer") },
+                value = editedDescription,
+                onValueChange = { editedDescription = it },
+                label = { Text("Açıklama / Not") },
                 modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number
+                maxLines = 3,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = colorScheme.primary,
+                    unfocusedBorderColor = colorScheme.outline
                 )
             )
 
@@ -550,16 +601,25 @@ fun EditGoalBottomSheet(
                 onClick = {
                     val updated = goal.copy(
                         title = editedTitle,
-                        targetValue = editedTargetValue.toDoubleOrNull() ?: goal.targetValue,
+                        targetValue = if (isNumericGoal) {
+                            editedTargetValue.toDoubleOrNull() ?: goal.targetValue
+                        } else {
+                            1.0 // Evet/Hayır hedefleri için her zaman 1.0
+                        },
+                        unit = if (isNumericGoal) editedUnit.ifBlank { null } else goal.unit,
+                        note = editedDescription.ifBlank { null },
                         isReminderActive = isReminderActive,
                         reminderHour = if (isReminderActive) selectedHour else null,
                         reminderMinute = if (isReminderActive) selectedMinute else null
                     )
                     onConfirm(updated)
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colorScheme.primary
+                )
             ) {
-                Text("Değişiklikleri Kaydet")
+                Text("Değişiklikleri Kaydet", fontWeight = FontWeight.Bold)
             }
         }
     }

@@ -3,9 +3,12 @@ package com.esra.goaltrackproject.presentation.addgoal
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -35,9 +38,11 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.esra.goaltrackproject.utils.toDateString
+import androidx.compose.ui.text.style.TextAlign
 import java.util.Calendar
 
 data class CategoryItem(
@@ -59,12 +64,7 @@ fun AddGoalScreen(
     onGoalSaved: () -> Unit,
     viewModel: AddGoalViewModel
 ) {
-    val primaryYellow = Color(0xFFFDD835)
-    val backgroundLight = Color(0xFFF8F8F5)
-    val cardWhite = Color(0xFFFFFFFF)
-    val inputBg = Color(0xFFF2F2ED)
-    val textBlack = Color(0xFF1A1A1A)
-    val textGray = Color(0xFF757575)
+    val colorScheme = MaterialTheme.colorScheme
 
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
@@ -72,14 +72,12 @@ fun AddGoalScreen(
     var unit by remember { mutableStateOf("Adet") }
     var selectedCategory by remember { mutableStateOf("Genel") }
     var showCategoryDialog by remember { mutableStateOf(false) }
-    val categories = listOf("Genel", "Sağlık", "İş", "Eğitim")
     var measurementType by remember { mutableStateOf("Tamamlanma") }
     var frequency by remember { mutableStateOf("Gunluk") }
     var selectedWeeklyDays by remember { mutableStateOf(setOf<Int>()) }
     var selectedMonthlyDays by remember { mutableStateOf(setOf<Int>()) }
     var showWeeklyDialog by remember { mutableStateOf(false) }
     var showMonthlyDialog by remember { mutableStateOf(false) }
-    var priority by remember { mutableStateOf("Varsayılan") }
 
     val calendar = Calendar.getInstance()
     var startDate by remember { mutableStateOf(calendar.timeInMillis) }
@@ -103,14 +101,14 @@ fun AddGoalScreen(
     }
 
     Scaffold(
-        containerColor = backgroundLight,
+        containerColor = colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Yeni Alışkanlık", color = textBlack, fontWeight = FontWeight.Bold) },
+                title = { Text("Yeni Alışkanlık", color = colorScheme.onSurface, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onGoalSaved) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Geri", tint = textBlack)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Geri", tint = colorScheme.onSurface)
                     }
                 },
                 actions = {
@@ -132,14 +130,18 @@ fun AddGoalScreen(
                                 note = description
                             )
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = primaryYellow),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorScheme.secondary),
                         shape = RoundedCornerShape(50),
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
-                        Text("Oluştur", color = textBlack, fontWeight = FontWeight.Bold)
+                        Text("Oluştur", color = colorScheme.onSecondary, fontWeight = FontWeight.Bold)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundLight)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = colorScheme.surface,
+                    titleContentColor = colorScheme.onSurface,
+                    navigationIconContentColor = colorScheme.onSurface
+                )
             )
         }
     ) { padding ->
@@ -161,27 +163,20 @@ fun AddGoalScreen(
                         .verticalScroll(rememberScrollState())
                 ) {
                     // 1. GENEL BİLGİ
-                    SectionHeader("Genel bilgi", "Gerekli", textBlack)
-                    FormCard(cardWhite) {
+                    SectionHeader("Genel bilgi", "Gerekli")
+                    FormCard {
                         // Başlık Input
-                        TextField(
+                        ModernTextField(
                             value = title,
                             onValueChange = { title = it },
-                            placeholder = { Text("Alışkanlık adı") },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = inputBg,
-                                unfocusedContainerColor = inputBg,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent
-                            ),
-                            shape = RoundedCornerShape(12.dp)
+                            placeholder = "Alışkanlık adı",
+                            modifier = Modifier.fillMaxWidth()
                         )
 
                         Spacer(modifier = Modifier.height(12.dp))
 
                         // Başlangıç Tarihi Seçimi
-                        DatePickerRow("Başlangıç tarihi", startDate.toDateString(), textBlack, inputBg) {
+                        DatePickerRow("Başlangıç tarihi", startDate.toDateString()) {
                             DatePickerDialog(context, { _, y, m, d ->
                                 calendar.set(y, m, d)
                                 startDate = calendar.timeInMillis
@@ -194,16 +189,16 @@ fun AddGoalScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Bitiş tarihi ekle", color = textBlack, fontWeight = FontWeight.Medium)
+                            Text("Bitiş tarihi ekle", color = colorScheme.onSurface, fontWeight = FontWeight.Medium)
                             Switch(
                                 checked = isEndDateActive,
                                 onCheckedChange = { isEndDateActive = it },
-                                colors = SwitchDefaults.colors(checkedThumbColor = primaryYellow)
+                                colors = SwitchDefaults.colors(checkedThumbColor = colorScheme.secondary)
                             )
                         }
 
                         if (isEndDateActive) {
-                            DatePickerRow("Bitiş tarihi seç", endDate.toDateString(), textBlack, inputBg) {
+                            DatePickerRow("Bitiş tarihi seç", endDate.toDateString()) {
                                 DatePickerDialog(context, { _, y, m, d ->
                                     calendar.set(y, m, d)
                                     endDate = calendar.timeInMillis
@@ -214,25 +209,24 @@ fun AddGoalScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    SectionHeader("Kategori", null, textBlack)
+                    SectionHeader("Kategori", null)
                     Surface(
                         onClick = { showCategoryDialog = true },
-                        color = inputBg,
+                        color = colorScheme.surface,
                         shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.5f)),
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                     ) {
                         Row(
-                            modifier = Modifier.padding(16.dp),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Column {
-                                Text(selectedCategory, color = textBlack, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            }
+                            Text(selectedCategory, color = colorScheme.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                             Icon(
                                 imageVector = Icons.Default.KeyboardArrowDown,
                                 contentDescription = null,
-                                tint = textGray
+                                tint = colorScheme.onSurface.copy(alpha = 0.6f)
                             )
                         }
                     }
@@ -243,25 +237,26 @@ fun AddGoalScreen(
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    SectionHeader("Değerlendirme & Sıklık", null, textBlack)
-                    FormCard(cardWhite) {
+                    SectionHeader("Değerlendirme & Sıklık", null)
+                    FormCard {
                         // Sıklık
-                        Text("Sıklık", color = textBlack, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
-                        listOf("Günlük", "Haftalık", "Aylık").forEach { item ->
-                            FrequencyOption(item, frequency == item, primaryYellow, textBlack) {
+                        Text("Sıklık", color = colorScheme.onSurface, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 12.dp))
+                        SegmentedControl(
+                            items = listOf("Günlük", "Haftalık", "Aylık"),
+                            selectedItem = frequency,
+                            onItemSelected = { item ->
                                 frequency = item
                                 if (item == "Haftalık") showWeeklyDialog = true
                                 if (item == "Aylık") showMonthlyDialog = true
                             }
-
-                        }
+                        )
 
                         if (frequency != "Gunluk") {
                             val count = if (frequency == "Haftalık") selectedWeeklyDays.size else selectedMonthlyDays.size
                             Text(
                                 text = "$count gün seçildi - Düzenlemek için tıkla",
                                 fontSize = 12.sp,
-                                color = Color.Gray,
+                                color = colorScheme.onSurface.copy(alpha = 0.6f),
                                 modifier = Modifier
                                     .padding(start = 16.dp, top = 4.dp)
                                     .clickable { if (frequency == "Haftalık") showWeeklyDialog = true else showMonthlyDialog = true }
@@ -271,12 +266,11 @@ fun AddGoalScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Değerlendirme Türü
-                        Text("Değerlendirme türü", color = textBlack, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+                        Text("Değerlendirme türü", color = colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
                         TypeSelectionCard(
                             "EVET VEYA HAYIR",
                             "Sadece aktiviteyi yapıp yapmadığınızı takip etmek mi istiyorsunuz?",
-                            measurementType == "Tamamlanma",
-                            primaryYellow, cardWhite, textBlack, textGray
+                            measurementType == "Tamamlanma"
                         ) { measurementType = "Tamamlanma" }
 
                         Spacer(modifier = Modifier.height(12.dp))
@@ -284,28 +278,26 @@ fun AddGoalScreen(
                         TypeSelectionCard(
                             "SAYISAL DEĞER",
                             "Günlük hedef veya limit belirlemek ister misiniz?",
-                            measurementType == "Sayisal",
-                            primaryYellow, cardWhite, textBlack, textGray
+                            measurementType == "Sayisal"
                         ) { measurementType = "Sayisal" }
 
                         if (measurementType == "Sayisal") {
                             Spacer(modifier = Modifier.height(12.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                TextField(
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                ModernTextField(
                                     value = targetValue,
                                     onValueChange = { targetValue = it },
-                                    label = { Text("Hedef") },
+                                    placeholder = "Hedef",
+                                    label = "Hedef",
                                     modifier = Modifier.weight(1f),
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    colors = TextFieldDefaults.colors(focusedContainerColor = inputBg, unfocusedContainerColor = inputBg)
+                                    keyboardType = KeyboardType.Number
                                 )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                TextField(
+                                ModernTextField(
                                     value = unit,
                                     onValueChange = { unit = it },
-                                    label = { Text("Birim") },
-                                    modifier = Modifier.weight(1f),
-                                    colors = TextFieldDefaults.colors(focusedContainerColor = inputBg, unfocusedContainerColor = inputBg)
+                                    placeholder = "Birim",
+                                    label = "Birim",
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
                         }
@@ -313,8 +305,8 @@ fun AddGoalScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    SectionHeader("Hatırlatıcı & Notlar", "İsteğe Bağlı", textBlack)
-                    FormCard(cardWhite) {
+                    SectionHeader("Hatırlatıcı & Notlar", "İsteğe Bağlı")
+                    FormCard {
                         // Hatırlatıcı
                         Surface(
                             onClick = {
@@ -324,19 +316,19 @@ fun AddGoalScreen(
                                     reminderMinute = m
                                 }, reminderHour, reminderMinute, true).show()
                             },
-                            color = inputBg,
+                            color = colorScheme.background,
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.AddAlert, contentDescription = null, tint = primaryYellow)
+                                Icon(Icons.Default.AddAlert, contentDescription = null, tint = colorScheme.primary)
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(
                                     if (isReminderActive) "Hergün ${String.format("%02d:%02d", reminderHour, reminderMinute)}"
                                     else "Hatırlatıcı ekle",
-                                    color = textBlack, fontWeight = FontWeight.Bold
+                                    color = colorScheme.onSurface, fontWeight = FontWeight.Bold
                                 )
                             }
                         }
@@ -344,18 +336,20 @@ fun AddGoalScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Açıklama
-                        TextField(
+                        OutlinedTextField(
                             value = description,
                             onValueChange = { description = it },
-                            placeholder = { Text("Açıklama veya motivasyon notu...") },
+                            placeholder = { Text("Açıklama veya motivasyon notu...", color = colorScheme.onSurface.copy(alpha = 0.5f)) },
                             modifier = Modifier.fillMaxWidth().height(100.dp),
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = inputBg,
-                                unfocusedContainerColor = inputBg,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = colorScheme.surface,
+                                unfocusedContainerColor = colorScheme.surface,
+                                focusedBorderColor = colorScheme.primary,
+                                unfocusedBorderColor = colorScheme.outline.copy(alpha = 0.5f),
+                                cursorColor = colorScheme.primary
                             ),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(12.dp),
+                            maxLines = 4
                         )
                     }
 
@@ -372,27 +366,20 @@ fun AddGoalScreen(
                     .padding(16.dp)
             ) {
                 // 1. GENEL BİLGİ
-                SectionHeader("Genel bilgi", "Gerekli", textBlack)
-                FormCard(cardWhite) {
+                SectionHeader("Genel bilgi", "Gerekli")
+                FormCard {
                     // Başlık Input
-                    TextField(
+                    ModernTextField(
                         value = title,
                         onValueChange = { title = it },
-                        placeholder = { Text("Alışkanlık adı") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = inputBg,
-                            unfocusedContainerColor = inputBg,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        ),
-                        shape = RoundedCornerShape(12.dp)
+                        placeholder = "Alışkanlık adı",
+                        modifier = Modifier.fillMaxWidth()
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // Başlangıç Tarihi Seçimi
-                    DatePickerRow("Başlangıç tarihi", startDate.toDateString(), textBlack, inputBg) {
+                    DatePickerRow("Başlangıç tarihi", startDate.toDateString()) {
                         DatePickerDialog(context, { _, y, m, d ->
                             calendar.set(y, m, d)
                             startDate = calendar.timeInMillis
@@ -405,16 +392,16 @@ fun AddGoalScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Bitiş tarihi ekle", color = textBlack, fontWeight = FontWeight.Medium)
+                        Text("Bitiş tarihi ekle", color = colorScheme.onSurface, fontWeight = FontWeight.Medium)
                         Switch(
                             checked = isEndDateActive,
                             onCheckedChange = { isEndDateActive = it },
-                            colors = SwitchDefaults.colors(checkedThumbColor = primaryYellow)
+                            colors = SwitchDefaults.colors(checkedThumbColor = colorScheme.secondary)
                         )
                     }
 
                     if (isEndDateActive) {
-                        DatePickerRow("Bitiş tarihi seç", endDate.toDateString(), textBlack, inputBg) {
+                        DatePickerRow("Bitiş tarihi seç", endDate.toDateString()) {
                             DatePickerDialog(context, { _, y, m, d ->
                                 calendar.set(y, m, d)
                                 endDate = calendar.timeInMillis
@@ -425,25 +412,24 @@ fun AddGoalScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                SectionHeader("Kategori", null, textBlack)
+                SectionHeader("Kategori", null)
                 Surface(
                     onClick = { showCategoryDialog = true },
-                    color = inputBg,
+                    color = colorScheme.surface,
                     shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.5f)),
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                 ) {
                     Row(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Column {
-                            Text(selectedCategory, color = textBlack, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        }
+                        Text(selectedCategory, color = colorScheme.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowDown,
                             contentDescription = null,
-                            tint = textGray
+                            tint = colorScheme.onSurface.copy(alpha = 0.6f)
                         )
                     }
                 }
@@ -451,22 +437,25 @@ fun AddGoalScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // --- 2. SIKLIK ---
-                SectionHeader("Sıklık", null, textBlack)
-                FormCard(cardWhite) {
-                    listOf("Günlük", "Haftalık", "Aylık").forEach { item ->
-                        FrequencyOption(item, frequency == item, primaryYellow, textBlack) {
+                SectionHeader("Sıklık", null)
+                FormCard {
+                    Text("Sıklık", color = colorScheme.onSurface, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 12.dp))
+                    SegmentedControl(
+                        items = listOf("Günlük", "Haftalık", "Aylık"),
+                        selectedItem = frequency,
+                        onItemSelected = { item ->
                             frequency = item
                             if (item == "Haftalık") showWeeklyDialog = true
                             if (item == "Aylık") showMonthlyDialog = true
                         }
-                    }
+                    )
 
                     if (frequency != "Gunluk") {
                         val count = if (frequency == "Haftalık") selectedWeeklyDays.size else selectedMonthlyDays.size
                         Text(
                             text = "$count gün seçildi - Düzenlemek için tıkla",
                             fontSize = 12.sp,
-                            color = Color.Gray,
+                            color = colorScheme.onSurface.copy(alpha = 0.6f),
                             modifier = Modifier
                                 .padding(start = 16.dp, top = 4.dp)
                                 .clickable { if (frequency == "Haftalık") showWeeklyDialog = true else showMonthlyDialog = true }
@@ -477,13 +466,12 @@ fun AddGoalScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // --- 3. DEĞERLENDİRME TÜRÜ ---
-                SectionHeader("Değerlendirme türü", null, textBlack)
+                SectionHeader("Değerlendirme türü", null)
 
                 TypeSelectionCard(
                     "EVET VEYA HAYIR",
                     "Sadece aktiviteyi yapıp yapmadığınızı takip etmek mi istiyorsunuz?",
-                    measurementType == "Tamamlanma",
-                    primaryYellow, cardWhite, textBlack, textGray
+                    measurementType == "Tamamlanma"
                 ) { measurementType = "Tamamlanma" }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -491,28 +479,26 @@ fun AddGoalScreen(
                 TypeSelectionCard(
                     "SAYISAL DEĞER",
                     "Günlük hedef veya limit belirlemek ister misiniz?",
-                    measurementType == "Sayisal",
-                    primaryYellow, cardWhite, textBlack, textGray
+                    measurementType == "Sayisal"
                 ) { measurementType = "Sayisal" }
 
                 if (measurementType == "Sayisal") {
-                    FormCard(cardWhite, Modifier.padding(top = 8.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            TextField(
+                    FormCard(Modifier.padding(top = 8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            ModernTextField(
                                 value = targetValue,
                                 onValueChange = { targetValue = it },
-                                label = { Text("Hedef") },
+                                placeholder = "Hedef",
+                                label = "Hedef",
                                 modifier = Modifier.weight(1f),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                colors = TextFieldDefaults.colors(focusedContainerColor = inputBg, unfocusedContainerColor = inputBg)
+                                keyboardType = KeyboardType.Number
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            TextField(
+                            ModernTextField(
                                 value = unit,
                                 onValueChange = { unit = it },
-                                label = { Text("Birim") },
-                                modifier = Modifier.weight(1f),
-                                colors = TextFieldDefaults.colors(focusedContainerColor = inputBg, unfocusedContainerColor = inputBg)
+                                placeholder = "Birim",
+                                label = "Birim",
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     }
@@ -521,8 +507,8 @@ fun AddGoalScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // --- 4. HATIRLATICI & NOTLAR ---
-                SectionHeader("Hatırlatıcı", "İsteğe Bağlı", textBlack)
-                FormCard(cardWhite) {
+                SectionHeader("Hatırlatıcı", "İsteğe Bağlı")
+                FormCard {
                     Surface(
                         onClick = {
                             isReminderActive = true
@@ -531,19 +517,19 @@ fun AddGoalScreen(
                                 reminderMinute = m
                             }, reminderHour, reminderMinute, true).show()
                         },
-                        color = inputBg,
+                        color = colorScheme.background,
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.AddAlert, contentDescription = null, tint = primaryYellow)
+                            Icon(Icons.Default.AddAlert, contentDescription = null, tint = colorScheme.primary)
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 if (isReminderActive) "Hergün ${String.format("%02d:%02d", reminderHour, reminderMinute)}"
                                 else "Hatırlatıcı ekle",
-                                color = textBlack, fontWeight = FontWeight.Bold
+                                color = colorScheme.onSurface, fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -551,20 +537,22 @@ fun AddGoalScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                SectionHeader("Diger", "İsteğe Bağlı", textBlack)
-                FormCard(cardWhite) {
-                    TextField(
+                SectionHeader("Diger", "İsteğe Bağlı")
+                FormCard {
+                    OutlinedTextField(
                         value = description,
                         onValueChange = { description = it },
-                        placeholder = { Text("Açıklama veya motivasyon notu...") },
+                        placeholder = { Text("Açıklama veya motivasyon notu...", color = colorScheme.onSurface.copy(alpha = 0.5f)) },
                         modifier = Modifier.fillMaxWidth().height(100.dp),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = inputBg,
-                            unfocusedContainerColor = inputBg,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = colorScheme.surface,
+                            unfocusedContainerColor = colorScheme.surface,
+                            focusedBorderColor = colorScheme.primary,
+                            unfocusedBorderColor = colorScheme.outline.copy(alpha = 0.5f),
+                            cursorColor = colorScheme.primary
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        maxLines = 4
                     )
                 }
 
@@ -574,6 +562,7 @@ fun AddGoalScreen(
     }
     if (showCategoryDialog) {
         CategorySelectionDialog(
+            selectedCategory = selectedCategory,
             onCategorySelected = { categoryName ->
                 selectedCategory = categoryName
             },
@@ -590,8 +579,7 @@ fun AddGoalScreen(
                     selectedWeeklyDays + day
                 }
             },
-            onDismiss = { showWeeklyDialog = false },
-            primaryColor = primaryYellow
+            onDismiss = { showWeeklyDialog = false }
         )
     }
 
@@ -605,8 +593,7 @@ fun AddGoalScreen(
                     selectedMonthlyDays + day
                 }
             },
-            onDismiss = { showMonthlyDialog = false },
-            primaryColor = primaryYellow
+            onDismiss = { showMonthlyDialog = false }
         )
     }
 
@@ -615,25 +602,26 @@ fun AddGoalScreen(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CategorySelectionDialog(
+    selectedCategory: String,
     onCategorySelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val primaryYellow = Color(0xFFFDD835)
+    val colorScheme = MaterialTheme.colorScheme
 
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("KAPAT", color = Color.Black, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+                Text("KAPAT", color = colorScheme.onSurface, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
             }
         },
         title = {
-            Text("Kategori Seçin", fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+            Text("Kategori Seçin", fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = colorScheme.onSurface)
         },
         text = {
             Column {
-                Divider(color = Color.LightGray.copy(0.3f), thickness = 1.dp)
+                Divider(color = colorScheme.onSurface.copy(alpha = 0.3f), thickness = 1.dp)
                 Spacer(modifier = Modifier.height(16.dp))
 
                 LazyVerticalGrid(
@@ -645,7 +633,7 @@ fun CategorySelectionDialog(
                     items(categoryList) { item ->
                         CategoryDialogItem(
                             item = item,
-                            primaryColor = primaryYellow
+                            isSelected = item.name == selectedCategory
                         ) {
                             onCategorySelected(item.name)
                             onDismiss()
@@ -655,90 +643,126 @@ fun CategorySelectionDialog(
             }
         },
         shape = RoundedCornerShape(28.dp),
-        containerColor = Color.White
+        containerColor = colorScheme.surface
     )
 }
 
 @Composable
 fun CategoryDialogItem(
     item: CategoryItem,
-    primaryColor: Color,
+    isSelected: Boolean = false,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+    
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(60.dp)
+            .height(72.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        color = Color(0xFFF8F8F5),
-        border = BorderStroke(1.dp, Color.LightGray.copy(0.2f))
+        color = colorScheme.surface,
+        border = BorderStroke(
+            width = if (isSelected) 2.dp else 1.dp,
+            color = if (isSelected) colorScheme.primary else colorScheme.outline.copy(alpha = 0.3f)
+        )
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = primaryColor,
-                modifier = Modifier.size(32.dp)
+                shape = RoundedCornerShape(12.dp),
+                color = colorScheme.surfaceVariant,
+                modifier = Modifier.size(40.dp)
             ) {
                 Icon(
                     imageVector = item.icon,
                     contentDescription = null,
-                    modifier = Modifier.padding(6.dp),
-                    tint = Color.Black
+                    modifier = Modifier.padding(8.dp),
+                    tint = colorScheme.primary
                 )
             }
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = item.name,
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
-                color = Color.Black,
-                maxLines = 1
+                modifier = Modifier.weight(1f),
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp,
+                color = colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
 }
 
 @Composable
-fun SectionHeader(title: String, tag: String?, textColor: Color) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp, start = 4.dp)) {
-        Text(title, color = textColor, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+fun SectionHeader(title: String, tag: String?) {
+    val colorScheme = MaterialTheme.colorScheme
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 16.dp, start = 4.dp)) {
+        Text(title, color = colorScheme.onSurface, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
         if (tag != null) {
             Spacer(modifier = Modifier.width(8.dp))
-            Surface(color = Color.Black.copy(0.05f), shape = RoundedCornerShape(4.dp)) {
-                Text(tag, color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+            Surface(color = colorScheme.onSurface.copy(alpha = 0.05f), shape = RoundedCornerShape(4.dp)) {
+                Text(tag, color = colorScheme.onSurface.copy(alpha = 0.6f), fontSize = 11.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
             }
         }
     }
 }
 
 @Composable
-fun FormCard(bgColor: Color, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+fun FormCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
     Surface(
-        color = bgColor,
+        color = colorScheme.surface,
         shape = RoundedCornerShape(16.dp),
-        shadowElevation = 2.dp,
+        shadowElevation = 4.dp,
         modifier = modifier.fillMaxWidth(),
-        content = { Column(modifier = Modifier.padding(16.dp), content = content) }
+        content = { Column(modifier = Modifier.padding(20.dp), content = content) }
     )
 }
 
 @Composable
-fun FrequencyOption(text: String, isSelected: Boolean, primary: Color, textBlack: Color, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+fun SegmentedControl(
+    items: List<String>,
+    selectedItem: String,
+    onItemSelected: (String) -> Unit
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Surface(
+        color = colorScheme.background,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        RadioButton(
-            selected = isSelected,
-            onClick = onClick,
-            colors = RadioButtonDefaults.colors(selectedColor = primary)
-        )
-        Text(text, color = textBlack, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+        Row(
+            modifier = Modifier.padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            items.forEach { item ->
+                val isSelected = item == selectedItem
+                Surface(
+                    onClick = { onItemSelected(item) },
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isSelected) colorScheme.primary else Color.Transparent,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = item,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        textAlign = TextAlign.Center,
+                        color = if (isSelected) colorScheme.onPrimary else colorScheme.onSurface,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -746,28 +770,35 @@ fun FrequencyOption(text: String, isSelected: Boolean, primary: Color, textBlack
 @Composable
 fun WeeklyDayPicker(
     selectedDays: Set<Int>,
-    onDayClick: (Int) -> Unit,
-    primaryColor: Color
+    onDayClick: (Int) -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     val days = listOf("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz")
     Column(modifier = Modifier.padding(top = 8.dp)) {
-        Text("Hangi günler?", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+        Text("Hangi günler?", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colorScheme.onSurface.copy(alpha = 0.6f))
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             days.forEachIndexed { index, day ->
                 val dayNum = index + 1
                 val isSelected = selectedDays.contains(dayNum)
                 Surface(
                     onClick = { onDayClick(dayNum) },
-                    shape = CircleShape,
-                    color = if (isSelected) primaryColor else Color.Transparent,
-                    border = if (!isSelected) BorderStroke(1.dp, Color.LightGray) else null,
-                    modifier = Modifier.size(40.dp)
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isSelected) colorScheme.primary else Color.Transparent,
+                    border = if (!isSelected) BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.3f)) else null,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(40.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text(day.take(1), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            day, 
+                            fontSize = 10.sp, 
+                            fontWeight = FontWeight.Bold, 
+                            color = if (isSelected) colorScheme.onPrimary else colorScheme.onSurface
+                        )
                     }
                 }
             }
@@ -779,29 +810,29 @@ fun WeeklyDayPicker(
 fun WeeklySelectionDialog(
     selectedDays: Set<Int>,
     onDayClick: (Int) -> Unit,
-    onDismiss: () -> Unit,
-    primaryColor: Color
+    onDismiss: () -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Tamam", color = Color.Black) } },
-        title = { Text("Günleri Seçin", fontWeight = FontWeight.Bold) },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Tamam", color = colorScheme.primary) } },
+        title = { Text("Günleri Seçin", fontWeight = FontWeight.Bold, color = colorScheme.onSurface) },
         text = {
-            WeeklyDayPicker(selectedDays, onDayClick, primaryColor)
+            WeeklyDayPicker(selectedDays, onDayClick)
         },
         shape = RoundedCornerShape(24.dp),
-        containerColor = Color.White
+        containerColor = colorScheme.surface
     )
 }
 
 @Composable
 fun MonthlyDayPicker(
     selectedDays: Set<Int>,
-    onDayClick: (Int) -> Unit,
-    primaryColor: Color
+    onDayClick: (Int) -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     Column(modifier = Modifier.padding(top = 8.dp)) {
-        Text("Ayın hangi günleri?", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+        Text("Ayın hangi günleri?", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colorScheme.onSurface.copy(alpha = 0.6f))
         LazyVerticalGrid(
             columns = GridCells.Fixed(7), // 7li grid
             modifier = Modifier.height(200.dp).padding(top = 8.dp),
@@ -814,11 +845,11 @@ fun MonthlyDayPicker(
                 Surface(
                     onClick = { onDayClick(dayNum) },
                     shape = RoundedCornerShape(8.dp),
-                    color = if (isSelected) primaryColor else Color(0xFFF2F2ED),
+                    color = if (isSelected) colorScheme.primary else colorScheme.background,
                     modifier = Modifier.aspectRatio(1f)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text("$dayNum", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("$dayNum", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (isSelected) colorScheme.onPrimary else colorScheme.onSurface)
                     }
                 }
             }
@@ -830,18 +861,18 @@ fun MonthlyDayPicker(
 fun MonthlySelectionDialog(
     selectedDays: Set<Int>,
     onDayClick: (Int) -> Unit,
-    onDismiss: () -> Unit,
-    primaryColor: Color
+    onDismiss: () -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Tamam", color = Color.Black) } },
-        title = { Text("Ayın Günlerini Seçin", fontWeight = FontWeight.Bold) },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Tamam", color = colorScheme.primary) } },
+        title = { Text("Ayın Günlerini Seçin", fontWeight = FontWeight.Bold, color = colorScheme.onSurface) },
         text = {
-            MonthlyDayPicker(selectedDays, onDayClick, primaryColor)
+            MonthlyDayPicker(selectedDays, onDayClick)
         },
         shape = RoundedCornerShape(24.dp),
-        containerColor = Color.White
+        containerColor = colorScheme.surface
     )
 }
 
@@ -850,25 +881,22 @@ fun TypeSelectionCard(
     title: String,
     desc: String,
     isSelected: Boolean,
-    primary: Color,
-    cardBg: Color,
-    textBlack: Color,
-    textGray: Color,
     onClick: () -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
-        color = cardBg,
+        color = if (isSelected) colorScheme.primary else colorScheme.surface,
         shape = RoundedCornerShape(16.dp),
         shadowElevation = if (isSelected) 4.dp else 1.dp,
-        border = if (isSelected) BorderStroke(2.dp, primary) else null
+        border = if (isSelected) BorderStroke(2.dp, colorScheme.primary) else null
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, color = textBlack, fontWeight = FontWeight.Bold)
-                Text(desc, color = textGray, fontSize = 13.sp)
+                Text(title, color = if (isSelected) colorScheme.onPrimary else colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                Text(desc, color = if (isSelected) colorScheme.onPrimary.copy(alpha = 0.7f) else colorScheme.onSurface.copy(alpha = 0.6f), fontSize = 13.sp)
             }
-            RadioButton(selected = isSelected, onClick = onClick, colors = RadioButtonDefaults.colors(selectedColor = primary))
+            RadioButton(selected = isSelected, onClick = onClick, colors = RadioButtonDefaults.colors(selectedColor = if (isSelected) colorScheme.onPrimary else colorScheme.primary))
         }
     }
 }
@@ -890,54 +918,94 @@ fun GoalTextField(label: String, value: String, onValueChange: (String) -> Unit,
 }
 
 @Composable
-fun DatePickerRow(label: String, value: String, textColor: Color, bg: Color, onClick: () -> Unit) {
+fun ModernTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    label: String? = null,
+    keyboardType: KeyboardType = KeyboardType.Text
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = { Text(placeholder, color = colorScheme.onSurface.copy(alpha = 0.5f)) },
+        label = label?.let { { Text(it, color = colorScheme.onSurface.copy(alpha = 0.7f)) } },
+        modifier = modifier,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        interactionSource = interactionSource,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = colorScheme.surface,
+            unfocusedContainerColor = colorScheme.surface,
+            focusedBorderColor = colorScheme.primary,
+            unfocusedBorderColor = colorScheme.outline.copy(alpha = 0.5f),
+            focusedLabelColor = colorScheme.onSurface.copy(alpha = 0.7f),
+            unfocusedLabelColor = colorScheme.onSurface.copy(alpha = 0.5f),
+            cursorColor = colorScheme.primary
+        ),
+        shape = RoundedCornerShape(12.dp)
+    )
+}
+
+@Composable
+fun DatePickerRow(label: String, value: String, onClick: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
     Surface(
         onClick = onClick,
-        color = bg,
+        color = colorScheme.surface,
         shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.5f)),
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(label, color = textColor)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(value, color = textColor, fontWeight = FontWeight.Bold)
-                Icon(Icons.Default.DateRange, contentDescription = null, tint = Color.Gray, modifier = Modifier.padding(start = 8.dp))
+            Column {
+                Text(label, color = colorScheme.onSurface.copy(alpha = 0.6f), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(value, color = colorScheme.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
             }
+            Icon(Icons.Default.DateRange, contentDescription = null, tint = colorScheme.primary, modifier = Modifier.size(20.dp))
         }
     }
 }
 
 @Composable
 fun CustomInputLabel(text: String) {
-    Text(text, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6B7280), modifier = Modifier.padding(bottom = 8.dp, start = 4.dp))
+    val colorScheme = MaterialTheme.colorScheme
+    Text(text, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = colorScheme.onSurface.copy(alpha = 0.6f), modifier = Modifier.padding(bottom = 8.dp, start = 4.dp))
 }
 
 @Composable
 fun EvaluationOption(title: String, icon: ImageVector, isSelected: Boolean, modifier: Modifier, primary: Color, bg: Color, onClick: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
     Surface(
         modifier = modifier.height(100.dp).clickable { onClick() },
         shape = RoundedCornerShape(20.dp),
-        color = if (isSelected) primary.copy(alpha = 0.1f) else bg,
-        border = if (isSelected) BorderStroke(2.dp, primary) else null
+        color = if (isSelected) colorScheme.primary.copy(alpha = 0.1f) else colorScheme.surface,
+        border = if (isSelected) BorderStroke(2.dp, colorScheme.primary) else null
     ) {
         Column(verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            Surface(shape = CircleShape, color = if (isSelected) primary else Color.White, modifier = Modifier.size(36.dp)) {
-                Icon(icon, contentDescription = null, modifier = Modifier.padding(8.dp), tint = Color.Black)
+            Surface(shape = CircleShape, color = if (isSelected) colorScheme.primary else colorScheme.surface, modifier = Modifier.size(36.dp)) {
+                Icon(icon, contentDescription = null, modifier = Modifier.padding(8.dp), tint = if (isSelected) colorScheme.onPrimary else colorScheme.onSurface)
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Text(title, fontSize = 13.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
+            Text(title, fontSize = 13.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium, color = colorScheme.onSurface)
         }
     }
 }
 
 @Composable
 fun RowScope.MeasurementTypeSelector(text: String, isSelected: Boolean, onClick: () -> Unit) {
-    val backgroundColor = if (isSelected) Color(0xFFFDD835) else Color.Transparent
-    val textColor = if (isSelected) Color.Black else Color.Gray
+    val colorScheme = MaterialTheme.colorScheme
+    val backgroundColor = if (isSelected) colorScheme.secondary else Color.Transparent
+    val textColor = if (isSelected) colorScheme.onSecondary else colorScheme.onSurface.copy(alpha = 0.6f)
     Box(
         modifier = Modifier.weight(1f).fillMaxHeight().padding(4.dp)
             .background(backgroundColor, RoundedCornerShape(20.dp)).clickable { onClick() },
@@ -949,18 +1017,19 @@ fun RowScope.MeasurementTypeSelector(text: String, isSelected: Boolean, onClick:
 
 @Composable
 fun DatePickerField(label: String, value: String, onClick: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-            .background(Color(0xFFEEEEEE), RoundedCornerShape(12.dp)).clickable { onClick() }.padding(16.dp),
+            .background(colorScheme.background, RoundedCornerShape(12.dp)).clickable { onClick() }.padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.DateRange, contentDescription = null)
+            Icon(Icons.Default.DateRange, contentDescription = null, tint = colorScheme.primary)
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(label, style = MaterialTheme.typography.bodySmall)
-                Text(value, fontWeight = FontWeight.SemiBold)
+                Text(label, style = MaterialTheme.typography.bodySmall, color = colorScheme.onSurface.copy(alpha = 0.6f))
+                Text(value, fontWeight = FontWeight.SemiBold, color = colorScheme.onSurface)
             }
         }
     }
@@ -968,19 +1037,20 @@ fun DatePickerField(label: String, value: String, onClick: () -> Unit) {
 
 @Composable
 fun TimePickerField(label: String, hour: Int, minute: Int, onClick: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
     val timeString = String.format("%02d:%02d", hour, minute)
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-            .background(Color(0xFFEEEEEE), RoundedCornerShape(12.dp)).clickable { onClick() }.padding(16.dp),
+            .background(colorScheme.background, RoundedCornerShape(12.dp)).clickable { onClick() }.padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Schedule, contentDescription = null)
+            Icon(Icons.Default.Schedule, contentDescription = null, tint = colorScheme.primary)
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(label, style = MaterialTheme.typography.bodySmall)
-                Text(timeString, fontWeight = FontWeight.SemiBold)
+                Text(label, style = MaterialTheme.typography.bodySmall, color = colorScheme.onSurface.copy(alpha = 0.6f))
+                Text(timeString, fontWeight = FontWeight.SemiBold, color = colorScheme.onSurface)
             }
         }
     }

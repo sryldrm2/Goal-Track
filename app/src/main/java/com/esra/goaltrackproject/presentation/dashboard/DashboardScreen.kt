@@ -1,6 +1,5 @@
 package com.esra.goaltrackproject.presentation.dashboard
 
-import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -51,7 +50,8 @@ data class CalendarDay(
 fun DashboardScreen(
     viewModel: DashboardViewModel,
     onGoalClick: (Int) -> Unit,
-    onAddGoalClick: () -> Unit
+    onAddGoalClick: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     val context = LocalContext.current
     val userPreferences = remember { UserPreferences(context) }
@@ -59,8 +59,7 @@ fun DashboardScreen(
     val avatarResId = remember { userPreferences.getAvatar(com.esra.goaltrackproject.R.drawable.avatar1) }
     val state by viewModel.uiState.collectAsState()
     var showNotificationSheet by remember { mutableStateOf(false) }
-    val backgroundLight = Color(0xFFF8F8F5)
-    val primaryYellow = Color(0xFFFDD835)
+    val colorScheme = MaterialTheme.colorScheme
 
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
@@ -72,7 +71,7 @@ fun DashboardScreen(
     if (showNotificationSheet) {
         ModalBottomSheet(
             onDismissRequest = { showNotificationSheet = false },
-            containerColor = Color.White
+            containerColor = colorScheme.surface
         ) {
             NotificationSheetContent(
                 notifications = state.notifications,
@@ -85,12 +84,12 @@ fun DashboardScreen(
     }
 
     Scaffold(
-        containerColor = backgroundLight,
+        containerColor = colorScheme.background,
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onAddGoalClick,
-                containerColor = Color.Black,
-                contentColor = primaryYellow,
+                containerColor = colorScheme.secondary,
+                contentColor = colorScheme.onSecondary,
                 shape = CircleShape
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Ekle", modifier = Modifier.size(30.dp))
@@ -130,17 +129,20 @@ fun DashboardScreen(
                                     .border(1.dp, Color.LightGray.copy(0.3f), CircleShape)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text("Merhaba, $userName👋", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                Text("Bugünün Hedefleri", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                            }
+                            Text(
+                                "Merhaba, $userName", 
+                                style = MaterialTheme.typography.titleLarge, 
+                                fontWeight = FontWeight.Bold, 
+                                color = colorScheme.onBackground
+                            )
                         }
                         Box {
                             IconButton(onClick = { showNotificationSheet = true }) {
                                 Icon(
                                     Icons.Default.Notifications,
                                     contentDescription = "Bildirimler",
-                                    modifier = Modifier.size(28.dp)
+                                    modifier = Modifier.size(28.dp),
+                                    tint = colorScheme.onBackground
                                 )
                             }
                             if (state.unreadNotificationCount > 0) {
@@ -151,7 +153,7 @@ fun DashboardScreen(
                                         .size(18.dp)
                                         .align(Alignment.TopEnd)
                                         .offset(x = (-2).dp, y = 2.dp),
-                                    border = BorderStroke(2.dp, Color.White)
+                                    border = BorderStroke(2.dp, colorScheme.surface)
                                 ) {
                                     Text(
                                         text = if (state.unreadNotificationCount > 9) "9+" else state.unreadNotificationCount.toString(),
@@ -168,14 +170,15 @@ fun DashboardScreen(
                     HeroSuccessCard(totalProgress = state.totalProgressPercent)
 
                     Surface(
-                        color = Color(0xFFFDD835),
+                        color = colorScheme.secondary,
                         shape = RoundedCornerShape(50.dp)
                     ) {
                         Text(
                             text = state.headerTitle,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                             fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
+                            fontSize = 12.sp,
+                            color = colorScheme.onSecondary
                         )
                     }
 
@@ -202,7 +205,7 @@ fun DashboardScreen(
                                 day = day.dayName,
                                 num = day.dayNumber,
                                 isSelected = isSameDay(day.dateInMillis, state.selectedDate),
-                                primary = Color(0xFFFDD835),
+                                primary = colorScheme.secondary,
                                 onClick = { viewModel.onDateSelected(day.dateInMillis) }
                             )
                         }
@@ -214,7 +217,7 @@ fun DashboardScreen(
                                 label = label,
                                 icon = icon,
                                 isSelected = state.selectedCategory == label,
-                                primary = primaryYellow,
+                                primary = colorScheme.secondary,
                                 onClick = { viewModel.onCategorySelected(label) }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -274,17 +277,28 @@ fun DashboardScreen(
                                     .border(1.dp, Color.LightGray.copy(0.3f), CircleShape)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text("Merhaba, $userName 👋", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-                                Text("Bugünün Hedefleri", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            }
+                            Text(
+                                "Merhaba, $userName ", 
+                                style = MaterialTheme.typography.titleLarge, 
+                                fontWeight = FontWeight.Bold, 
+                                color = colorScheme.onBackground
+                            )
+                        }
+                        IconButton(onClick = onSettingsClick) {
+                            Icon(
+                                Icons.Default.Settings,
+                                contentDescription = "Ayarlar",
+                                modifier = Modifier.size(26.dp),
+                                tint = colorScheme.onBackground
+                            )
                         }
                         Box {
                             IconButton(onClick = { showNotificationSheet = true }) {
                                 Icon(
                                     Icons.Default.Notifications,
                                     contentDescription = "Bildirimler",
-                                    modifier = Modifier.size(28.dp)
+                                    modifier = Modifier.size(28.dp),
+                                    tint = colorScheme.onBackground
                                 )
                             }
                             if (state.unreadNotificationCount > 0) {
@@ -295,7 +309,7 @@ fun DashboardScreen(
                                         .size(18.dp)
                                         .align(Alignment.TopEnd)
                                         .offset(x = (-2).dp, y = 2.dp),
-                                    border = BorderStroke(2.dp, Color.White)
+                                    border = BorderStroke(2.dp, colorScheme.surface)
                                 ) {
                                     Text(
                                         text = if (state.unreadNotificationCount > 9) "9+" else state.unreadNotificationCount.toString(),
@@ -335,7 +349,7 @@ fun DashboardScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Surface(
-                            color = Color(0xFFFDD835),
+                            color = colorScheme.secondary,
                             shape = RoundedCornerShape(50.dp),
                             modifier = Modifier.padding(bottom = 12.dp)
                         ) {
@@ -343,7 +357,8 @@ fun DashboardScreen(
                                 text = state.headerTitle,
                                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
                                 fontWeight = FontWeight.ExtraBold,
-                                fontSize = 14.sp
+                                fontSize = 14.sp,
+                                color = colorScheme.onSecondary
                             )
                         }
 
@@ -357,7 +372,7 @@ fun DashboardScreen(
                                     day = day.dayName,
                                     num = day.dayNumber,
                                     isSelected = isSameDay(day.dateInMillis, state.selectedDate),
-                                    primary = Color(0xFFFDD835),
+                                    primary = colorScheme.secondary,
                                     onClick = { viewModel.onDateSelected(day.dateInMillis) }
                                 )
                             }
@@ -376,7 +391,7 @@ fun DashboardScreen(
                                 label = label,
                                 icon = icon,
                                 isSelected = state.selectedCategory == label,
-                                primary = primaryYellow,
+                                primary = colorScheme.secondary,
                                 onClick = { viewModel.onCategorySelected(label) }
                             )
                         }
@@ -449,14 +464,15 @@ fun DateItem(
     primary: Color,
     onClick: () -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.width(60.dp).clickable { onClick() }
     ) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = if (isSelected) primary else Color.White,
-            border = if (!isSelected) BorderStroke(1.dp, Color.LightGray.copy(0.3f)) else null,
+            color = if (isSelected) primary else colorScheme.surface,
+            border = if (!isSelected) BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.2f)) else null,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(85.dp)
@@ -465,26 +481,27 @@ fun DateItem(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(text = day, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (isSelected) Color.Black else Color.Gray)
+                Text(text = day, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (isSelected) colorScheme.onSecondary else colorScheme.onSurface.copy(alpha = 0.6f))
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = num, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+                Text(text = num, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = if (isSelected) colorScheme.onSecondary else colorScheme.onSurface)
             }
         }
 
         // Seçili günün altındaki nokta
         if (isSelected) {
             Spacer(modifier = Modifier.height(6.dp))
-            Box(modifier = Modifier.size(6.dp).background(Color(0xFF3F51B5), CircleShape))
+            Box(modifier = Modifier.size(6.dp).background(primary, CircleShape))
         }
     }
 }
 
 @Composable
 fun CategoryChip(label: String, icon: ImageVector, isSelected: Boolean, primary: Color, onClick: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) Color.Black else Color.White,
+        color = if (isSelected) colorScheme.primary else colorScheme.surface,
         shadowElevation = 2.dp,
         modifier = Modifier.height(45.dp)
     ) {
@@ -492,10 +509,22 @@ fun CategoryChip(label: String, icon: ImageVector, isSelected: Boolean, primary:
             modifier = Modifier.padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = if (isSelected) primary else Color.Gray)
+            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = if (isSelected) primary else colorScheme.onSurface.copy(alpha = 0.6f))
             Spacer(modifier = Modifier.width(8.dp))
-            Text(label, fontWeight = FontWeight.Bold, color = if (isSelected) Color.White else Color.Black)
+            Text(label, fontWeight = FontWeight.Bold, color = if (isSelected) colorScheme.onPrimary else colorScheme.onSurface)
         }
+    }
+}
+
+@Composable
+fun getCategoryIcon(category: String): ImageVector {
+    return when (category) {
+        "Genel" -> Icons.Default.GridView
+        "Sağlık" -> Icons.Default.Favorite
+        "İş" -> Icons.Default.Work
+        "Eğitim" -> Icons.Default.School
+        "Spor" -> Icons.Default.FitnessCenter
+        else -> Icons.Default.GridView
     }
 }
 
@@ -521,13 +550,15 @@ fun GoalListItem(
     val displayValue = minOf(dailyValue, goal.targetValue)
     val progressFactor = (dailyValue / goal.targetValue).coerceIn(0.0, 1.0)
     val displayPercentage = (progressFactor * 100).toInt()
+    val colorScheme = MaterialTheme.colorScheme
+    val categoryIcon = getCategoryIcon(goal.category)
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onNavigate() },
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
+        color = colorScheme.surface,
         shadowElevation = 2.dp
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -535,18 +566,18 @@ fun GoalListItem(
 
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFF8F8F5),
+                    color = colorScheme.background,
                     modifier = Modifier.size(50.dp)
                 ) {
-                    Icon(Icons.Default.DirectionsRun, contentDescription = null, modifier = Modifier.padding(12.dp), tint = Color(0xFFE57373))
+                    Icon(categoryIcon, contentDescription = null, modifier = Modifier.padding(12.dp), tint = colorScheme.primary)
                 }
 
                 Spacer(modifier = Modifier.width(16.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(goal.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Surface(color = Color(0xFFF2F2ED), shape = RoundedCornerShape(4.dp)) {
-                        Text(goal.category.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = Color.Gray)
+                    Text(goal.title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colorScheme.onSurface)
+                    Surface(color = colorScheme.background, shape = RoundedCornerShape(4.dp)) {
+                        Text(goal.category.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = colorScheme.onSurface.copy(alpha = 0.6f))
                     }
                 }
 
@@ -566,14 +597,14 @@ fun GoalListItem(
                         Icon(
                             imageVector = if (isDoneToday) Icons.Default.CheckCircle else Icons.Default.AddCircle,
                             contentDescription = if (isDoneToday) "Tamamlandı" else "Artır",
-                            tint = if (isDoneToday) Color(0xFF4CAF50) else Color.Black,
+                            tint = if (isDoneToday) Color(0xFF4CAF50) else colorScheme.primary,
                             modifier = Modifier.size(28.dp)
                         )
                     } else {
                         Icon(
                             imageVector = if (isDoneToday) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                             contentDescription = null,
-                            tint = if (isDoneToday) Color(0xFF4CAF50) else Color.LightGray,
+                            tint = if (isDoneToday) Color(0xFF4CAF50) else colorScheme.onSurface.copy(alpha = 0.4f),
                             modifier = Modifier.size(28.dp)
                         )
                     }
@@ -589,20 +620,21 @@ fun GoalListItem(
                     Text(
                         text = "Günlük: ${displayValue.toInt()}/${goal.targetValue.toInt()} ${goal.unit ?: ""}",
                         fontSize = 12.sp,
-                        color = Color.Gray
+                        color = colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                     Text(
                         text = "%$displayPercentage",
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = colorScheme.onSurface
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 LinearProgressIndicator(
                     progress = { progressFactor.toFloat() },
                     modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
-                    color = Color(0xFFFDD835),
-                    trackColor = Color(0xFFF2F2ED)
+                    color = colorScheme.secondary,
+                    trackColor = colorScheme.background
                 )
             }
         }
@@ -614,62 +646,65 @@ fun EmptyStateComponent(
     category: String,
     onAddClick: () -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 40.dp),
+            .padding(vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Surface(
-            color = Color(0xFFF2F2ED),
+            color = colorScheme.background,
             shape = CircleShape,
-            modifier = Modifier.size(100.dp)
+            modifier = Modifier.size(80.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Inbox,
                 contentDescription = null,
-                modifier = Modifier.padding(24.dp).size(40.dp),
-                tint = Color.LightGray
+                modifier = Modifier.padding(20.dp).size(32.dp),
+                tint = colorScheme.onSurface.copy(alpha = 0.4f)
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Text(
             text = if (category == "Tümü") "Henüz bir hedefin yok" else "$category kategorisinde hedef yok",
             fontWeight = FontWeight.Bold,
-            fontSize = 18.sp,
-            color = Color.Black
+            fontSize = 16.sp,
+            color = colorScheme.onSurface
         )
 
         Text(
             text = "Hadi, hemen bir tane oluşturmaya başla!",
-            fontSize = 14.sp,
-            color = Color.Gray,
-            modifier = Modifier.padding(top = 8.dp)
+            fontSize = 13.sp,
+            color = colorScheme.onSurface.copy(alpha = 0.6f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 32.dp)
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = onAddClick,
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
-            shape = RoundedCornerShape(12.dp)
+            colors = ButtonDefaults.buttonColors(containerColor = colorScheme.primary),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.height(45.dp)
         ) {
-            Text("İlk Hedefini Ekle", color = Color.White)
+            Text("İlk Hedefini Ekle", color = colorScheme.onPrimary, fontWeight = FontWeight.Bold)
         }
     }
 }
 
 @Composable
 fun HeroSuccessCard(totalProgress: Int) {
-    val primaryYellow = Color(0xFFFDD835)
+    val colorScheme = MaterialTheme.colorScheme
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = primaryYellow)
+        colors = CardDefaults.cardColors(containerColor = colorScheme.primary)
     ) {
         Row(
             modifier = Modifier.padding(24.dp),
@@ -677,14 +712,14 @@ fun HeroSuccessCard(totalProgress: Int) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Günlük Başarı", color = Color.Black.copy(0.7f), fontWeight = FontWeight.Medium)
+                Text("Günlük Başarı", color = colorScheme.onPrimary.copy(alpha = 0.7f), fontWeight = FontWeight.Medium)
                 Text(
                     text = "%$totalProgress",
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color.Black
+                    color = colorScheme.onPrimary
                 )
-                Text("Tamamlandı", color = Color.Black.copy(0.7f))
+                Text("Tamamlandı", color = colorScheme.onPrimary.copy(alpha = 0.7f))
                 Spacer(modifier = Modifier.height(12.dp))
                 LinearProgressIndicator(
                     progress = { totalProgress / 100f },
@@ -692,8 +727,8 @@ fun HeroSuccessCard(totalProgress: Int) {
                         .fillMaxWidth()
                         .height(8.dp)
                         .clip(CircleShape),
-                    color = Color.Black,
-                    trackColor = Color.Black.copy(0.1f)
+                    color = colorScheme.secondary,
+                    trackColor = colorScheme.onPrimary.copy(alpha = 0.2f)
                 )
             }
 
@@ -701,13 +736,13 @@ fun HeroSuccessCard(totalProgress: Int) {
 
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = Color.Black.copy(0.1f),
+                color = colorScheme.onPrimary.copy(alpha = 0.2f),
                 modifier = Modifier.size(60.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.EmojiEvents,
                     contentDescription = null,
-                    tint = Color.Black,
+                    tint = colorScheme.onPrimary,
                     modifier = Modifier.padding(12.dp)
                 )
             }
@@ -723,15 +758,16 @@ fun NotificationSheetContent(
     onMarkAllRead: () -> Unit,
     onClearAll: () -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     Column(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.6f).padding(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Bildirimler", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("Bildirimler", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = colorScheme.onSurface)
             Row {
-                TextButton(onClick = onMarkAllRead) { Text("Hepsini Oku", fontSize = 12.sp) }
+                TextButton(onClick = onMarkAllRead) { Text("Hepsini Oku", fontSize = 12.sp, color = colorScheme.primary) }
                 TextButton(onClick = onClearAll) { Text("Temizle", color = Color.Red, fontSize = 12.sp) }
             }
         }
@@ -740,7 +776,7 @@ fun NotificationSheetContent(
 
         if (notifications.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Bildirim bulunmuyor.", color = Color.Gray)
+                Text("Bildirim bulunmuyor.", color = colorScheme.onSurface.copy(alpha = 0.6f))
             }
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -762,15 +798,16 @@ fun NotificationItem(
     onMarkAsRead: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = if (notification.isRead) Color(0xFFF2F2ED) else Color(0xFFFDD835).copy(alpha = 0.2f),
+        color = if (notification.isRead) colorScheme.background else colorScheme.secondary.copy(alpha = 0.2f),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(notification.title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text(notification.message, fontSize = 12.sp)
+                Text(notification.title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = colorScheme.onSurface)
+                Text(notification.message, fontSize = 12.sp, color = colorScheme.onSurface.copy(alpha = 0.7f))
             }
             if (!notification.isRead) {
                 IconButton(onClick = onMarkAsRead) {
@@ -778,7 +815,7 @@ fun NotificationItem(
                 }
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Gray)
+                Icon(Icons.Default.Delete, contentDescription = null, tint = colorScheme.onSurface.copy(alpha = 0.6f))
             }
         }
     }

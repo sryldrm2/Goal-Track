@@ -15,6 +15,7 @@ import androidx.work.WorkerParameters
 import com.esra.goaltrackproject.R
 import com.esra.goaltrackproject.data.GoalDatabase
 import com.esra.goaltrackproject.data.NotificationEntity
+import com.esra.goaltrackproject.data.UserPreferences
 import java.util.Calendar
 
 class GoalReminderWorker(
@@ -28,6 +29,12 @@ class GoalReminderWorker(
     }
 
     override suspend fun doWork(): Result {
+        // Önce kullanıcı ayarlarında bildirimlerin açık olup olmadığını kontrol et
+        val userPreferences = UserPreferences(applicationContext)
+        if (!userPreferences.getNotificationsEnabled()) {
+            return Result.success()
+        }
+
         val goalId = inputData.getInt("GOAL_ID", -1)
         val goalTitle = inputData.getString("GOAL_TITLE") ?: "Hedef Hatırlatıcısı"
 

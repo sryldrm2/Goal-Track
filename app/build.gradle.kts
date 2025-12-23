@@ -43,6 +43,7 @@ android {
 }
 
 dependencies {
+    implementation("com.airbnb.android:lottie-compose:6.4.0")
     implementation(libs.androidx.material3.icons.extended)
     // Room
     // val roomVersion = "2.6.1"  <-- BU ARTIK GEREKSİZ
