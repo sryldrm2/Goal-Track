@@ -9,8 +9,8 @@ public class DailyProgress
     public int GoalId { get; set; }
     public Goal Goal { get; set; } = null!;
 
-    // İlerlemenin gerçekleştiği gün
-    public DateTime Date { get; set; }
+    // İlerlemenin ait olduğu takvim günü (saat bilgisi yok)
+    public DateOnly Date { get; set; }
 
     // O gün gerçekleştirilen ilerleme miktarı
     public decimal Value { get; set; }

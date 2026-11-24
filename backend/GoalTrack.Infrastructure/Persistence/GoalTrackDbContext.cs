@@ -155,7 +155,8 @@ public class GoalTrackDbContext : DbContext
         modelBuilder.Entity<Category>()
             .HasMany(c => c.Goals)
             .WithOne(g => g.Category)
-            .HasForeignKey(g => g.CategoryId);
+            .HasForeignKey(g => g.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         // Goal -> DailyProgress
         modelBuilder.Entity<Goal>()
