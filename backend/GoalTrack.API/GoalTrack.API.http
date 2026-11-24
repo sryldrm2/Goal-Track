@@ -1,0 +1,6 @@
+@GoalTrack.API_HostAddress = http://localhost:5279
+
+GET {{GoalTrack.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

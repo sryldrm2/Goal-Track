@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="GoalTrack.API/GoalTrack.API.csproj" />
+  <Project Path="GoalTrack.Application/GoalTrack.Application.csproj" />
+  <Project Path="GoalTrack.Domain/GoalTrack.Domain.csproj" />
+  <Project Path="GoalTrack.Infrastructure/GoalTrack.Infrastructure.csproj" />
+</Solution>
